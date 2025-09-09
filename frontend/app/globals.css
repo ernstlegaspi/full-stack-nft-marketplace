@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme inline {
+	--color-b: #15202a;
+	--color-w: #faf7f2;
+}
+
+@layer utilities {
+	.button {
+		@apply rounded-[10px] border-2 font-medium p-2 cursor-pointer
+	}
+
+	.r {
+		@apply bg-red-300
+	}
+}
