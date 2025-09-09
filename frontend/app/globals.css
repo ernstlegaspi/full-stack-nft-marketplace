@@ -1,16 +1,21 @@
 @import "tailwindcss";
 
 @theme inline {
-	--color-b: #15202a;
-	--color-w: #faf7f2;
+  --color-bb: #15202a;
+  --color-w: #faf7f2;
+  --color-g: #ccc;
 }
 
 @layer utilities {
-	.button {
-		@apply rounded-[10px] border-2 font-medium p-2 cursor-pointer
-	}
+  .button {
+    @apply rounded-[10px] border-2 font-medium p-2 cursor-pointer select-none
+  }
 
-	.r {
-		@apply bg-red-300
-	}
+  .pointer {
+    @apply cursor-pointer
+  }
+
+  .r {
+    @apply bg-red-300
+  }
 }
