@@ -28,20 +28,7 @@ export default async function user(f: FastifyInstance) {
         required: ['message', 'signature'],
         type: 'object',
         properties: {
-          message: {
-            type: 'object',
-            additionalProperties: false,
-            required: ['domain', 'address', 'uri', 'version', 'chainId', 'nonce', 'issuedAt'],
-            properties: {
-              domain: { type: 'string' },
-              address: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' },
-              statement: { type: 'string' },
-              uri: { type: 'string' },
-              version: { type: 'string' },
-              chainId: { type: 'integer' },
-              nonce: { type: 'string' }
-            }
-          },
+          message: { type: 'string' },
           signature: { type: 'string' }
         }
       },

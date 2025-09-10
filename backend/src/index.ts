@@ -26,7 +26,7 @@ import userRoutes from './routes/user.route'
 
   app.register(cors, {
     credentials: true,
-    origin: '*'
+    origin: 'http://localhost:3000'
   })
 
   app.register(cookie, {
@@ -47,7 +47,7 @@ import userRoutes from './routes/user.route'
   app.register(userRoutes, { prefix: '/api/user/' })
 
   try {
-    const PORT = process.env.PORT || 3000
+    const PORT = process.env.PORT || 2217
 
     await mongoose.connect(process.env.DATABASE_URI!)
     await app.listen({ port: Number(PORT) })

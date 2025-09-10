@@ -13,7 +13,7 @@ type TUser = {
 }
 
 type TAuthSignature = {
-  message: SiweMessage
+  message: string
   signature: string
 }
 
@@ -83,7 +83,10 @@ export const handleUser = (f: FastifyInstance) => async (req: FastifyRequest<{ B
 
     const jti = randomUUID()
 
-    const user = await User.create({ address, accountBalance })
+    let user = await User.findOne({ address })
+
+    if(!user) user = await User.create({ address, accountBalance })
+
     const sub = user._id
 
     await RefreshToken.create({
