@@ -1,0 +1,44 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const cors_1 = __importDefault(require("@fastify/cors"));
+const dotenv_1 = __importDefault(require("dotenv"));
+const fastify_1 = __importDefault(require("fastify"));
+const mongoose_1 = __importDefault(require("mongoose"));
+const jwt_1 = __importDefault(require("./plugins/jwt"));
+const redis_1 = __importDefault(require("./plugins/redis"));
+(async () => {
+    dotenv_1.default.config();
+    const app = (0, fastify_1.default)({
+        ajv: {
+            customOptions: {
+                coerceTypes: false,
+                allErrors: true
+            }
+        },
+        logger: true
+    });
+    app.register(jwt_1.default);
+    app.register(redis_1.default);
+    app.register(cors_1.default, {
+        credentials: true,
+        origin: '*'
+    });
+    app.addSchema({
+        $id: 'ErrorResponse',
+        type: 'object',
+        required: ['message'],
+        properties: { message: { type: 'string' } }
+    });
+    try {
+        const PORT = process.env.PORT || 3000;
+        await mongoose_1.default.connect(process.env.DATABASE_URI);
+        await app.listen({ port: Number(PORT) });
+        console.log(`Server is running in port: ${PORT}`);
+    }
+    catch (e) {
+        app.log.error(e);
+    }
+})();
