@@ -8,6 +8,7 @@ const nftRequiredFields = [
   'contractAddress',
   'description',
   'imageUrl',
+  'metadataUrl',
   'name',
   'ownerAddress'
 ] as const
@@ -17,10 +18,10 @@ const nftAttributesField = {
   minItems: 1,
   items: {
     type: 'object',
-    required: ['key', 'value'],
+    required: ['trait_type', 'value'],
     additionalProperties: false,
     properties: {
-      key: { type: 'string', minLength: 1 },
+      trait_type: { type: 'string', minLength: 1 },
       value: { type: 'string' }
     }
   }
@@ -54,8 +55,8 @@ export default function nft(f: FastifyInstance) {
             maxLength: 7
           },
           description: { type: 'string', minLength: 8 },
-          imageUrl: { type: 'string' },
-          // imageUrl: { type: 'string', format: 'uri' },
+          imageUrl: { type: 'string', format: 'uri' },
+          metadataUrl: { type: 'string' },
           name: { type: 'string', minLength: 2 },
           ownerAddress: {
             type: 'string',
@@ -97,6 +98,7 @@ export default function nft(f: FastifyInstance) {
                 creator: { type: 'string' },
                 description: { type: 'string' },
                 imageUrl: { type: 'string' },
+                metadataUrl: { type: 'string' },
                 name: { type: 'string' },
                 ownerAddress: { type: 'string' },
                 ownerId: { type: 'string' },

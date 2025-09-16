@@ -1,7 +1,7 @@
 import { model, Schema } from 'mongoose'
 
 const AttributesSchema = new Schema({
-  key: {
+  trait_type: {
     type: String,
     required: true
   },
@@ -20,6 +20,10 @@ const NFTSchema = new Schema({
     type: String,
     required: true,
     lowercase: true,
+    trim: true
+  },
+  metadataUrl: {
+    type: String,
     trim: true
   },
   tokenId: {

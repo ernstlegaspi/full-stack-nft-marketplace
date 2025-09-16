@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = require("mongoose");
 const AttributesSchema = new mongoose_1.Schema({
-    key: {
+    trait_type: {
         type: String,
         required: true
     },
@@ -20,6 +20,10 @@ const NFTSchema = new mongoose_1.Schema({
         type: String,
         required: true,
         lowercase: true,
+        trim: true
+    },
+    metadataUrl: {
+        type: String,
         trim: true
     },
     tokenId: {

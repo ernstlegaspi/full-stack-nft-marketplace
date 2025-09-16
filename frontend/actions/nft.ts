@@ -1,24 +1,28 @@
-import type { TNFTInput } from "@/types"
+import type { TNFTInput, TNFTResponse } from "@/types"
 
 const url = process.env.NEXT_PUBLIC_API_URL!
 
-export const mintNFT = async (accessToken: string, data: TNFTInput, ownerAddress: string, userId: string) => {
+type TInput = {
+  accessToken: string
+  imageUrl: string
+  ownerAddress: string
+  userId: string
+} & TNFTInput
+
+export const mintNFT = async (data: TInput): Promise<TNFTResponse> => {
   const res = await fetch(
     `${url}nft/mint`,
     {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        'Authorization': `Bearer ${data.accessToken}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        ...data,
-        ownerAddress,
-        userId
-      })
+      body: JSON.stringify(data)
     }
   )
 
-  const body = await res.json()
-  console.log(body)
+  const body = await res.json() as TNFTResponse
+
+  return body
 }

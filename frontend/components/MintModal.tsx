@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { ChangeEvent, useRef, useState } from 'react'
 import { IoAddSharp, IoCloseSharp } from 'react-icons/io5'
 import { FaCheck } from "react-icons/fa6"
 
@@ -10,50 +10,25 @@ import { showMintModal } from '@/states/showMintModal'
 import { useTokenState } from '@/states/token'
 import { useUserId } from '@/states/userId'
 import { contractAddress } from '@/constants'
-import { _ownerAddress } from '@/utils/nft'
-
-/*
-  NFT fields
-
-  image_url
-  name
-  description
-  collection
-  attributes
-
-  auto generated metadata fields
-
-  {
-    "external_url": "https://yourwebsite.com/nfts/1",
-    "creator": "Akie",
-    "license": "CC BY-NC 4.0",
-    "collection": "Room Series",
-    "minted_at": "2025-09-09T12:00:00Z"
-  }
-*/
-
-// attributes: [{ key: string, value: string | boolean | number }]
-// backgroundColor: string
-// collection: string
-// contractAddress: string
-// description: string
-// imageUrl: string
-// name: string
-// ownerAddress: string
-// tokenId: number
-// userId: string
+import { _contract, _ownerAddress } from '@/utils/nft'
+import { uploadImageToPinata, uploadMetadataToPinata } from '@/actions/pinata'
 
 type TState = {
   isAddingAttributes: boolean
+  isImagePng: boolean
+  imageURI: string
   key: string
   loading: boolean
+  uploadedImage: File | null
   value: string
-} & TNFTInput
+} & Omit<TNFTInput, 'metadataUrl'>
 
 export default function MintModal() {
   const { isShown, setIsShown } = showMintModal()
   const { userId } = useUserId()
   const { token } = useTokenState()
+
+  const imageRef = useRef<HTMLInputElement>(null)
 
   const [state, setState] = useState<TState>({
     attributes: [],
@@ -61,36 +36,68 @@ export default function MintModal() {
     collection: '',
     contractAddress: contractAddress,
     description: '',
-    imageUrl: 'https://mywebsite.com/image_name/1',
     name: '',
 
     isAddingAttributes: false,
+    isImagePng: false,
+    imageURI: '',
     key: '',
     loading: false,
-    value: ''
+    uploadedImage: null,
+    value: '',
   })
 
   if(!isShown) return null
 
   const onClick = async () => {
     try {
-      await mintNFT(
-        token,
-        {
-          attributes: state.attributes,
-          backgroundColor: state.backgroundColor,
-          collection: state.collection,
-          contractAddress: state.contractAddress,
-          description: state.description,
-          imageUrl: state.imageUrl,
-          name: state.name
-        },
-        _ownerAddress,
-        userId
-      )
+      if(!_contract) {
+        alert('Unable to mint token. Try again later.')
+        return
+      }
+
+      if(!state.uploadedImage) {
+        alert('No image found')
+        return
+      }
+
+      handleState('loading', true)
+
+      const imageUrl = await uploadImageToPinata(state.uploadedImage)
+      const convertedImageUrl = `ipfs://${imageUrl}`
+
+      const metadataUrl = await uploadMetadataToPinata({
+        attributes: state.attributes,
+        backgroundColor: state.backgroundColor,
+        collection: state.collection,
+        description: state.description,
+        externalUrl: `${window.location.href}token/${state.name.replaceAll(' ', '-')}`,
+        imageUrl: convertedImageUrl,
+        name: state.name
+      })
+
+      const { nft } = await mintNFT({
+        accessToken: token,
+        imageUrl: `https://ipfs.io/ipfs/${imageUrl}`,
+        ownerAddress: _ownerAddress,
+        userId,
+        attributes: state.attributes,
+        backgroundColor: state.backgroundColor,
+        collection: state.collection,
+        contractAddress: state.contractAddress,
+        description: state.description,
+        name: state.name,
+        metadataUrl
+      })
+
+      await _contract.mintNFT(nft.tokenId, `ipfs://${metadataUrl}`)
+
+      alert('Token Minted')
     } catch(e) {
       console.error(e)
       alert('ERRORRR')
+    } finally {
+      handleState('loading', false)
     }
   }
 
@@ -101,27 +108,87 @@ export default function MintModal() {
   const Label = ({ label }: { label: string }) => <p className='text-bb mb-1 font-medium'>{label}</p>
 
   const handleCheck = () => {
-    state.attributes.push({ key: state.key, value: state.value })
+    state.attributes.push({ trait_type: state.key, value: state.value })
 
     handleState('key', '')
     handleState('value', '')
     handleState('isAddingAttributes', false)
   }
 
+  const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    try {
+      if(!e.target.files) return
+
+      const file = e.target.files[0]
+
+      if(!file) return
+
+      const allowedTypes = ['image/webp', 'image/png', 'image/jpg', 'image/jpeg']
+
+      if(!allowedTypes.includes(file.type.toLowerCase())) {
+        alert('Images only.')
+        return
+      }
+
+      handleState('uploadedImage', file)
+      handleState('imageURI', URL.createObjectURL(file))
+      handleState('isImagePng', file.type.split('/')[1] === 'png')
+    } catch(e) {
+      console.error(e)
+    }
+  }
+
+  const uploadImageClick = () => {
+    if(!imageRef.current) return
+
+    imageRef.current.click()
+  }
+
   return <div className='z-30 flex items-center justify-center fixed bg-black/50 inset-0'>
     <div className='w-[400px] border-2 border-bb rounded bg-white p-4'>
       <p className='font-medium text-[24px] mb-6'>Mint a new NFT</p>
 
-      <div className='flex items-center justify-center h-[100px] rounded border-dashed border border-g cursor-pointer transition-all hover:bg-g'>
-        <IoAddSharp className='text-[20px] mr-2 mt-[1px]' />
-        <p>Upload NFT Image</p>
-      </div>
+      <button
+        aria-label='Upload NFT Image'
+        className='
+          select-none flex w-full items-center justify-center h-[200px] rounded
+          border-dashed border border-g cursor-pointer transition-all hover:bg-g
+        '
+        onClick={uploadImageClick}
+        style={{
+          backgroundImage: `url(${state.imageURI})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        }}
+      >
+        {
+          state.imageURI ? null
+          : <>
+            <IoAddSharp className='text-[20px] mr-2 mt-[1px]' />
+            <p>Upload NFT Image</p>
+          </>
+        }
+      </button>
 
-      {/* will exist if image is .png */}
-      {/* <div className='mt-3'>
-        <Label label='Background Color' />
-        <input className='input' name='backgroundColor' />
-      </div> */}
+      {
+        state.imageURI ? <p className='mt-2'><span className='font-medium'>Image name:</span> {state.uploadedImage!.name}</p>
+        : null
+      }
+
+      <input
+        accept='image/*'
+        className='hidden'
+        onChange={handleImageChange}
+        ref={imageRef}
+        type='file'
+      />
+
+      {
+        state.isImagePng ? <div className='mt-3'>
+          <Label label='Background Color' />
+          <input className='input' name='backgroundColor' />
+        </div> : null
+      }
 
       <div className='my-3'>
         <Label label='Name' />
@@ -162,7 +229,7 @@ export default function MintModal() {
       {
           state.attributes.length < 1 ? null
         : state.attributes.map((attr, idx) => <div key={idx} className={`${state.isAddingAttributes ? 'mb-2' : ''} flex items-center`}>
-          <p className='font-medium mr-1'>{attr.key}: </p>
+          <p className='font-medium mr-1'>{attr.trait_type}: </p>
           <p>{attr.value}</p>
         </div>)
       }

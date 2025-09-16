@@ -8,6 +8,7 @@ const cors_1 = __importDefault(require("@fastify/cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const fastify_1 = __importDefault(require("fastify"));
 const mongoose_1 = __importDefault(require("mongoose"));
+const multipart_1 = __importDefault(require("@fastify/multipart"));
 const jwt_1 = __importDefault(require("./plugins/jwt"));
 const redis_1 = __importDefault(require("./plugins/redis"));
 const nft_route_1 = __importDefault(require("./routes/nft.route"));
@@ -25,6 +26,7 @@ const user_route_1 = __importDefault(require("./routes/user.route"));
     });
     app.register(jwt_1.default);
     app.register(redis_1.default);
+    app.register(multipart_1.default);
     app.register(cors_1.default, {
         credentials: true,
         origin: 'http://localhost:3000'

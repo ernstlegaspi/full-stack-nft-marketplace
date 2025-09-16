@@ -2,12 +2,12 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 
 import NFT from '../models/nft.model'
 import User from '../models/user.models'
-import { _500 } from '../utils/http_code'
+import { _400, _500 } from '../utils/http_code'
 
 type TMintNFT = {
   attributes: [
     {
-      key: string
+      trait_type: string
       value: string | number | boolean
     }
   ]
@@ -16,6 +16,7 @@ type TMintNFT = {
   contractAddress: string
   description: string
   imageUrl: string
+  metadataUrl: string
   name: string
   ownerAddress: string
   userId: string // for creator and ownerId
@@ -30,6 +31,7 @@ export const mintNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body
       contractAddress,
       description,
       imageUrl,
+      metadataUrl,
       name,
       ownerAddress,
       userId
@@ -45,6 +47,7 @@ export const mintNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body
       creator: userId,
       description,
       imageUrl,
+      metadataUrl,
       name,
       ownerAddress,
       ownerId: userId,
@@ -62,7 +65,10 @@ export const mintNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body
 
     const { createdAt, updatedAt, ...rest } = nft.toObject()
 
-    return rep.code(201).send({ ok: true, nft: { ...rest } })
+    return rep.code(201).send({
+      ok: true,
+      nft: { ...rest }
+    })
   } catch(e) {
     console.error(e)
     _500(rep)

@@ -9,7 +9,7 @@ const user_models_1 = __importDefault(require("../models/user.models"));
 const http_code_1 = require("../utils/http_code");
 const mintNFT = (f) => async (req, rep) => {
     try {
-        const { attributes, backgroundColor, collection, contractAddress, description, imageUrl, name, ownerAddress, userId } = req.body;
+        const { attributes, backgroundColor, collection, contractAddress, description, imageUrl, metadataUrl, name, ownerAddress, userId } = req.body;
         const tokenId = await f.redis.incr(contractAddress);
         const nft = await nft_model_1.default.create({
             attributes,
@@ -19,6 +19,7 @@ const mintNFT = (f) => async (req, rep) => {
             creator: userId,
             description,
             imageUrl,
+            metadataUrl,
             name,
             ownerAddress,
             ownerId: userId,
@@ -30,7 +31,10 @@ const mintNFT = (f) => async (req, rep) => {
             }
         });
         const { createdAt, updatedAt, ...rest } = nft.toObject();
-        return rep.code(201).send({ ok: true, nft: { ...rest } });
+        return rep.code(201).send({
+            ok: true,
+            nft: { ...rest }
+        });
     }
     catch (e) {
         console.error(e);

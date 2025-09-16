@@ -13,15 +13,15 @@ contract NFTMarketplace is ERC721URIStorage {
 
   constructor() ERC721("NFTMarketplace", "NFT") {}
 
-  function mintNFT(address _to, uint256 _tokenId, string memory _tokenURI) external {
+  function mintNFT(uint256 _tokenId, string memory _tokenURI) external {
     if(usedTokenId[_tokenId]) revert ETokenIDIsUsed();
 
-    _safeMint(_to, _tokenId);
+    _safeMint(msg.sender, _tokenId);
     _setTokenURI(_tokenId, _tokenURI);
 
     usedTokenId[_tokenId] = true;
 
-    emit EmitMint(_to, _tokenId, _tokenURI);
+    emit EmitMint(msg.sender, _tokenId, _tokenURI);
   }
 
   function burnNFT(uint256 _tokenId) external {

@@ -3,6 +3,7 @@ import cors from '@fastify/cors'
 import dotenv from 'dotenv'
 import Fastify from 'fastify'
 import mongoose from 'mongoose'
+import multipart from '@fastify/multipart'
 
 import jwtPlugin from './plugins/jwt'
 import redisPlugin from './plugins/redis'
@@ -24,6 +25,8 @@ import userRoutes from './routes/user.route'
 
   app.register(jwtPlugin)
   app.register(redisPlugin)
+
+  app.register(multipart)
 
   app.register(cors, {
     credentials: true,
