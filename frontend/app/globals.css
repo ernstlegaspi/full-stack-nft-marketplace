@@ -11,6 +11,10 @@
     @apply rounded-[10px] border-2 font-medium p-2 cursor-pointer select-none
   }
 
+  .input {
+    @apply w-full border border-g rounded-sm outline-none p-2
+  }
+
   .pointer {
     @apply cursor-pointer
   }

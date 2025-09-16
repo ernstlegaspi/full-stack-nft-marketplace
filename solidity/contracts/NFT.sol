@@ -4,27 +4,31 @@ pragma solidity ^0.8.30;
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 
 contract NFTMarketplace is ERC721URIStorage {
-    uint256 private tokenId;
+  mapping(uint256 => bool) private usedTokenId;
 
-    event EmitMint(address _to, uint256 _tokenId, string _tokenURI);
-    event EmitBurn(address _owner, uint256 _tokenId);
+  error ETokenIDIsUsed();
 
-    constructor() ERC721("NFTMarketplace", "NFT") {}
+  event EmitMint(address _to, uint256 _tokenId, string _tokenURI);
+  event EmitBurn(address _owner, uint256 _tokenId);
 
-    function mintNFT(address _to, string memory _tokenURI) external {
-      _safeMint(_to, tokenId);
-      _setTokenURI(tokenId, _tokenURI);
+  constructor() ERC721("NFTMarketplace", "NFT") {}
 
-      emit EmitMint(_to, tokenId, _tokenURI);
+  function mintNFT(address _to, uint256 _tokenId, string memory _tokenURI) external {
+    if(usedTokenId[_tokenId]) revert ETokenIDIsUsed();
 
-      tokenId++;
-    }
+    _safeMint(_to, _tokenId);
+    _setTokenURI(_tokenId, _tokenURI);
 
-    function burnNFT(uint256 _tokenId) external {
-      address owner = _requireOwned(_tokenId);
-      _checkAuthorized(owner, _msgSender(), _tokenId);
-      _burn(_tokenId);
+    usedTokenId[_tokenId] = true;
 
-      emit EmitBurn(owner, _tokenId);
-    }
+    emit EmitMint(_to, _tokenId, _tokenURI);
+  }
+
+  function burnNFT(uint256 _tokenId) external {
+    address owner = _requireOwned(_tokenId);
+    _checkAuthorized(owner, _msgSender(), _tokenId);
+    _burn(_tokenId);
+
+    emit EmitBurn(owner, _tokenId);
+  }
 }

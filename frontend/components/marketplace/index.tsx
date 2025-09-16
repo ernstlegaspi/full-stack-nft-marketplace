@@ -1,5 +1,3 @@
-
-
 export default function Marketplace() {
   return <>
     <p className='font-medium text-[20px] mb-3'>Marketplace</p>

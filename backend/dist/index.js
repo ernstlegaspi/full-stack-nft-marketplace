@@ -10,6 +10,7 @@ const fastify_1 = __importDefault(require("fastify"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const jwt_1 = __importDefault(require("./plugins/jwt"));
 const redis_1 = __importDefault(require("./plugins/redis"));
+const nft_route_1 = __importDefault(require("./routes/nft.route"));
 const user_route_1 = __importDefault(require("./routes/user.route"));
 (async () => {
     dotenv_1.default.config();
@@ -41,6 +42,7 @@ const user_route_1 = __importDefault(require("./routes/user.route"));
             ok: { type: 'boolean' }
         }
     });
+    app.register(nft_route_1.default, { prefix: '/api/nft/' });
     app.register(user_route_1.default, { prefix: '/api/user/' });
     try {
         const PORT = process.env.PORT || 2217;

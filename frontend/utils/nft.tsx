@@ -3,6 +3,11 @@ import { SiweMessage } from 'siwe'
 
 import { contractABI, contractAddress } from '../constants'
 
+type TAuth = {
+  id: string
+  token: string
+}
+
 function isEip1193(p: unknown): p is Eip1193Provider {
   return !!p && typeof (p as any).request === "function"
 }
@@ -11,7 +16,9 @@ const URL = `${process.env.NEXT_PUBLIC_API_URL!}`
 
 let _provider: ethers.BrowserProvider | null = null
 let _connecting = false
+let _body: TAuth
 
+export let _ownerAddress: string
 export let _contract: ethers.Contract | null = null
 
 export const createContract = async () => {
@@ -19,7 +26,7 @@ export const createContract = async () => {
     throw new Error("No EIP-1193 provider found.")
   }
 
-  if(_contract) return _contract
+  if(_contract) return _body
 
   if(_connecting) {
     await new Promise((res) => {
@@ -31,7 +38,7 @@ export const createContract = async () => {
       }, 50)
     })
 
-    return _contract!
+    return _body
   }
 
   try {
@@ -52,15 +59,11 @@ export const createContract = async () => {
     const signer = await _provider.getSigner()
     _contract = new ethers.Contract(contractAddress, contractABI, signer)
     const address = await signer.getAddress()
+    _ownerAddress = address
     const network = await _provider.getNetwork()
     const chainId = Number(network.chainId)
 
-    const nonceRes = await fetch(
-      `${URL}user/nonce`,
-      {
-        credentials: 'include'
-      }
-    )
+    const nonceRes = await fetch(`${URL}user/nonce`)
 
     const { nonce } = await nonceRes.json()
 
@@ -82,7 +85,6 @@ export const createContract = async () => {
       `${URL}user/verify-signature`,
       {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: prepMsg, signature })
       }
@@ -90,17 +92,19 @@ export const createContract = async () => {
 
     const balanceWei = await _provider.getBalance(address)
 
-    await fetch(
+    const res = await fetch(
       `${URL}user/`,
       {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address, accountBalance: balanceWei.toString() })
       }
     )
 
-    return _contract
+    const body = await res.json() as TAuth
+    _body = body
+
+    return body
   } finally {
     _connecting = false
   }

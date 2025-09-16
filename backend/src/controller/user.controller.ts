@@ -110,7 +110,7 @@ export const handleUser = (f: FastifyInstance) => async (req: FastifyRequest<{ B
       { expiresIn: tokenTime }
     )
 
-    return rep.code(201).send({ ok: true, token })
+    return rep.code(201).send({ ok: true, id: sub, token })
   } catch(e) {
     console.error(e)
     _500(rep)

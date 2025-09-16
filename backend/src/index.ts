@@ -6,6 +6,7 @@ import mongoose from 'mongoose'
 
 import jwtPlugin from './plugins/jwt'
 import redisPlugin from './plugins/redis'
+import nftRoutes from './routes/nft.route'
 import userRoutes from './routes/user.route'
 
 (async () => {
@@ -44,6 +45,7 @@ import userRoutes from './routes/user.route'
     }
   })
 
+  app.register(nftRoutes, { prefix: '/api/nft/' })
   app.register(userRoutes, { prefix: '/api/user/' })
 
   try {

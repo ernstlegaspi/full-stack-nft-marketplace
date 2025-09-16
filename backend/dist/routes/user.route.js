@@ -70,16 +70,11 @@ async function user(f) {
                 201: {
                     additionalProperties: false,
                     type: 'object',
+                    required: ['ok', 'id', 'token'],
                     properties: {
                         ok: { type: 'boolean' },
-                        token: {
-                            additionalProperties: false,
-                            type: 'object',
-                            required: ['sub'],
-                            properties: {
-                                sub: { type: 'string' }
-                            }
-                        }
+                        id: { type: 'string' },
+                        token: { type: 'string' }
                     }
                 },
                 400: { $ref: 'ErrorResponse#' },

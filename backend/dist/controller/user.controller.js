@@ -77,7 +77,7 @@ const handleUser = (f) => async (req, rep) => {
         }, { expiresIn: '7d' });
         setCookie(rep, refreshToken);
         const token = f.jwt.sign({ sub }, { expiresIn: tokenTime });
-        return rep.code(201).send({ ok: true, token });
+        return rep.code(201).send({ ok: true, id: sub, token });
     }
     catch (e) {
         console.error(e);
