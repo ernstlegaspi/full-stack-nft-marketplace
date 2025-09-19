@@ -106,11 +106,32 @@ export const handleUser = (f: FastifyInstance) => async (req: FastifyRequest<{ B
     setCookie(rep, refreshToken)
 
     const token = f.jwt.sign(
-      { sub },
+      { sub, address },
       { expiresIn: tokenTime }
     )
 
-    return rep.code(201).send({ ok: true, id: sub, token })
+    rep.setCookie(
+      'token',
+      token,
+      {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 30,
+        path: '/'
+      }
+    )
+
+    return rep.code(201).send({ ok: true })
+  } catch(e) {
+    console.error(e)
+    _500(rep)
+  }
+}
+
+export const authenticateUser = (f: FastifyInstance) => async (req: FastifyRequest, rep: FastifyReply) => {
+  try {
+    return rep.code(200).send({ authenticated: true })
   } catch(e) {
     console.error(e)
     _500(rep)

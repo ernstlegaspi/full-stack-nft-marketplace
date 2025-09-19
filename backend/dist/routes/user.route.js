@@ -70,11 +70,9 @@ async function user(f) {
                 201: {
                     additionalProperties: false,
                     type: 'object',
-                    required: ['ok', 'id', 'token'],
+                    required: ['ok'],
                     properties: {
-                        ok: { type: 'boolean' },
-                        id: { type: 'string' },
-                        token: { type: 'string' }
+                        ok: { type: 'boolean' }
                     }
                 },
                 400: { $ref: 'ErrorResponse#' },
@@ -82,5 +80,24 @@ async function user(f) {
             }
         },
         handler: (0, user_controller_1.handleUser)(f)
+    });
+    f.route({
+        method: 'GET',
+        url: 'authenticate',
+        schema: {
+            response: {
+                200: {
+                    type: 'object',
+                    additionalProperties: false,
+                    required: ['authenticated'],
+                    properties: {
+                        authenticated: { type: 'boolean' }
+                    }
+                },
+                500: { $ref: 'ErrorResponse#' }
+            }
+        },
+        preHandler: [f.authenticate],
+        handler: (0, user_controller_1.authenticateUser)(f)
     });
 }

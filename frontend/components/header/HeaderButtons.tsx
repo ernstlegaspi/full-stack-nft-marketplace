@@ -1,28 +1,26 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from "react"
 
 import { showMintModal } from "@/states/showMintModal"
-import { useTokenState } from "@/states/token"
 import { createContract } from "@/utils/nft"
-import { useUserId } from "@/states/userId"
+import { useIsLoggedIn } from '@/states/isLoggedIn'
 
-export default function HeaderButtons() {
-  const { token, setToken } = useTokenState()
-  const { setUserId } = useUserId()
+export default function HeaderButtons({ isAuthenticated }: { isAuthenticated: boolean }) {
   const { setIsShown } = showMintModal()
+  const { isLoggedIn, setIsLoggedIn } = useIsLoggedIn()
 
   const [loading, setLoading] = useState(false)
 
   const handleConnect = async () => {
     try {
       setLoading(true)
-      const { id, token } = await createContract()
 
-      setUserId(id)
-      setToken(token)
+      await createContract()
+
+      setIsLoggedIn(true)
     } catch(e) {
-      alert(1)
       console.error(e)
     } finally {
       setLoading(false)
@@ -31,15 +29,18 @@ export default function HeaderButtons() {
 
   return <>
     {
-      token ? <button
-        aria-label='Mint NFT'
-        className='button text-w bg-bb px-4 ml-2'
-        onClick={async () => {
-          setIsShown(true)
-        }}
-      >
-        Mint NFT
-      </button>
+      isAuthenticated || isLoggedIn ? <>
+        <button
+          aria-label='Mint NFT'
+          className='button text-w bg-bb px-4 ml-2'
+          onClick={async () => {
+            setIsShown(true)
+          }}
+        >
+          Mint NFT
+        </button>
+        <Link className='button ml-2 transition-all hover:bg-bb hover:text-w select-none' href='/tokens'>Your Tokens</Link>
+      </>
       : <button
         aria-label='Connect Wallet'
         className={`

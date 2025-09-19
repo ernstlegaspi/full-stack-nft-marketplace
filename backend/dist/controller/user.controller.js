@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.handleUser = exports.authVerifySignature = exports.authNonce = void 0;
+exports.authenticateUser = exports.handleUser = exports.authVerifySignature = exports.authNonce = void 0;
 const crypto_1 = require("crypto");
 const siwe_1 = require("siwe");
 const user_models_1 = __importDefault(require("../models/user.models"));
@@ -76,8 +76,15 @@ const handleUser = (f) => async (req, rep) => {
             sub
         }, { expiresIn: '7d' });
         setCookie(rep, refreshToken);
-        const token = f.jwt.sign({ sub }, { expiresIn: tokenTime });
-        return rep.code(201).send({ ok: true, id: sub, token });
+        const token = f.jwt.sign({ sub, address }, { expiresIn: tokenTime });
+        rep.setCookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 60 * 30,
+            path: '/'
+        });
+        return rep.code(201).send({ ok: true });
     }
     catch (e) {
         console.error(e);
@@ -85,4 +92,14 @@ const handleUser = (f) => async (req, rep) => {
     }
 };
 exports.handleUser = handleUser;
+const authenticateUser = (f) => async (req, rep) => {
+    try {
+        return rep.code(200).send({ authenticated: true });
+    }
+    catch (e) {
+        console.error(e);
+        (0, http_code_1._500)(rep);
+    }
+};
+exports.authenticateUser = authenticateUser;
 // implement refresh token controller

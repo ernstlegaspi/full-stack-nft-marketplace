@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import HeaderButtons from './HeaderButtons'
 
-export default function Header() {
+export default function Header({ isAuthenticated }: { isAuthenticated: boolean }) {
   return <div className='fixed w-full z-[20] bg-w'>
     <div className='w-[95%] flex items-center justify-between mx-auto py-4'>
       <Link href='/'>
@@ -10,7 +10,7 @@ export default function Header() {
       </Link>
 
       <div className='flex'>
-        <HeaderButtons />
+        <HeaderButtons isAuthenticated={isAuthenticated} />
       </div>
     </div>
   </div>

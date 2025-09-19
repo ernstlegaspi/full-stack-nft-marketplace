@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { mintNFT } from '../controller/nft.controller'
+import { getAllUserNFT, getTokenPerName, mintNFT, searchNFT } from '../controller/nft.controller'
 
 const nftRequiredFields = [
   'attributes',
@@ -27,6 +27,8 @@ const nftAttributesField = {
   }
 } as const
 
+// all = address page
+
 export default function nft(f: FastifyInstance) {
   f.route({
     method: 'POST',
@@ -35,10 +37,7 @@ export default function nft(f: FastifyInstance) {
       body: {
         type: 'object',
         additionalProperties: false,
-        required: [
-          'userId',
-          ...nftRequiredFields
-        ],
+        required: nftRequiredFields,
         properties: {
           attributes: nftAttributesField,
           collection: { type: 'string', minLength: 3 },
@@ -63,12 +62,6 @@ export default function nft(f: FastifyInstance) {
             pattern: '^0x[a-fA-F0-9]{40}$',
             minLength: 42,
             maxLength: 42
-          },
-          userId: {
-            type: 'string',
-            pattern: '^[a-fA-F0-9]{24}$',
-            minLength: 24,
-            maxLength: 24
           }
         }
       },
@@ -112,5 +105,186 @@ export default function nft(f: FastifyInstance) {
     },
     preHandler: [f.authenticate],
     handler: mintNFT(f)
+  })
+
+  f.route({
+    method: 'GET',
+    url: 'all',
+    schema: {
+      params: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['address', 'page'],
+        properties: {
+          address: {
+            type: 'string',
+            pattern: '^0x[0-9a-fA-F]{40}$',
+            minLength: 42,
+            maxLength: 42
+          },
+          page: { type: 'number', minimum: 1 }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          additionalPropertes: false,
+          required: ['cached', 'nfts'],
+          properties: {
+            cached: { type: 'boolean' },
+            nfts: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: [
+                  'attributes',
+                  'backgroundColor',
+                  'collection',
+                  'creator',
+                  'description',
+                  'imageUrl',
+                  'metadataUrl',
+                  'name',
+                  'tokenId'
+                ],
+                properties: {
+                  attributes: nftAttributesField,
+                  backgroundColor: { type: 'string' },
+                  collection: { type: 'string' },
+                  creator: {
+                    type: 'object',
+                    additionalProperties: false,
+                    required: ['address', 'name'],
+                    properties: {
+                      address: { type: 'string' },
+                      name: { type: 'string' }
+                    }
+                  },
+                  description: { type: 'string' },
+                  imageUrl: { type: 'string' },
+                  metadataUrl: { type: 'string' },
+                  name: { type: 'string' },
+                  tokenId: { type: 'number' },
+                }
+              }
+            }
+          }
+        },
+        500: { $ref: 'ErrorResponse#' }
+      }
+    },
+    preHandler: [f.authenticate],
+    handler: getAllUserNFT(f)
+  })
+
+  f.route({
+    method: 'GET',
+    url: 'token',
+    schema: {
+      params: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['tokenName'],
+        properties: {
+          tokenName: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['cached', 'nfts'],
+          properties: {
+            cached: { type: 'boolean' },
+            nfts: {
+              type: 'object',
+              additionalProperties: false,
+              required: [
+                'attributes',
+                'backgroundColor',
+                'collection',
+                'contractAddress',
+                'creator',
+                'description',
+                'imageUrl',
+                'metadataUrl',
+                'name',
+                'ownerId',
+                'tokenId'
+              ],
+              propertes: {
+                attributes: nftAttributesField,
+                backgroundColor: { type: 'string' },
+                collection: { type: 'string' },
+                contractAddress: { type: 'string' },
+                creator: {
+                  type: 'object',
+                  additionalProperties: false,
+                  required: ['address', 'name'],
+                  properties: {
+                    address: { type: 'string' },
+                    name: { type: 'string' }
+                  }
+                },
+                description: { type: 'string' },
+                imageUrl: { type: 'string' },
+                metadataUrl: { type: 'string' },
+                name: { type: 'string' },
+                ownerId: {
+                  type: 'object',
+                  additionalProperties: false,
+                  required: ['address', 'name'],
+                  properties: {
+                    address: { type: 'string' },
+                    name: { type: 'string' }
+                  }
+                },
+                tokenId: { type: 'number' }
+              }
+            }
+          }
+        },
+        500: { $ref: 'ErrorResponse#' }
+      }
+    },
+    handler: getTokenPerName(f)
+  })
+
+  f.route({
+    method: 'GET',
+    url: 'search',
+    schema: {
+      params: {
+        additionalProperties: false,
+        type: 'object',
+        required: ['page', 'search'],
+        properties: {
+          page: { type: 'number', minimum: 1 },
+          search: { type: 'string', minLength: 3 }
+        }
+      },
+      response: {
+        200: {
+          additionalProperties: false,
+          type: 'object',
+          required: ['cached', 'nfts'],
+          properties: {
+            cached: { type: 'boolean' },
+            nfts: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['imageUrl', 'name'],
+              properties: {
+                imageUrl: { type: 'string' },
+                name: { type: 'string' }
+              }
+            }
+          }
+        },
+        500: { $ref: 'ErrorResponse#' }
+      }
+    },
+    handler: searchNFT(f)
   })
 }

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { authNonce, authVerifySignature, handleUser } from '../controller/user.controller'
+import { authNonce, authVerifySignature, authenticateUser, handleUser } from '../controller/user.controller'
 
 export default async function user(f: FastifyInstance) {
   f.route({
@@ -71,11 +71,9 @@ export default async function user(f: FastifyInstance) {
         201: {
           additionalProperties: false,
           type: 'object',
-          required: ['ok', 'id', 'token'],
+          required: ['ok'],
           properties: {
-            ok: { type: 'boolean' },
-            id: { type: 'string' },
-            token: { type: 'string' }
+            ok: { type: 'boolean' }
           }
         },
         400: { $ref: 'ErrorResponse#' },
@@ -83,5 +81,25 @@ export default async function user(f: FastifyInstance) {
       }
     },
     handler: handleUser(f)
+  })
+
+  f.route({
+    method: 'GET',
+    url: 'authenticate',
+    schema: {
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['authenticated'],
+          properties: {
+            authenticated: { type: 'boolean' }
+          }
+        },
+        500: { $ref: 'ErrorResponse#' }
+      }
+    },
+    preHandler: [f.authenticate],
+    handler: authenticateUser(f)
   })
 }

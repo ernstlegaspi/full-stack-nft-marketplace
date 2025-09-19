@@ -1,17 +1,18 @@
 'use client'
 
-import { ChangeEvent, useRef, useState } from 'react'
+import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import { IoAddSharp, IoCloseSharp } from 'react-icons/io5'
 import { FaCheck } from "react-icons/fa6"
+import { RequestCookie } from 'next/dist/compiled/@edge-runtime/cookies'
 
 import { TNFTInput } from '@/types'
 import { mintNFT } from '@/actions/nft'
 import { showMintModal } from '@/states/showMintModal'
-import { useTokenState } from '@/states/token'
 import { useUserId } from '@/states/userId'
 import { contractAddress } from '@/constants'
-import { _contract, _ownerAddress } from '@/utils/nft'
 import { uploadImageToPinata, uploadMetadataToPinata } from '@/actions/pinata'
+import { createContractOnPageRefresh } from '@/utils/nft'
+import { ethers } from 'ethers'
 
 type TState = {
   isAddingAttributes: boolean
@@ -23,12 +24,27 @@ type TState = {
   value: string
 } & Omit<TNFTInput, 'metadataUrl'>
 
-export default function MintModal() {
+export default function MintModal({ token }: { token: RequestCookie }) {
   const { isShown, setIsShown } = showMintModal()
   const { userId } = useUserId()
-  const { token } = useTokenState()
+
+  const [_contract, setContract] = useState<ethers.Contract>()
+  const [_address, setAddress] = useState('')
 
   const imageRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { address, contract } = await createContractOnPageRefresh()
+        setAddress(address)
+        setContract(contract)
+      } catch(e) {
+        alert('Error minting.')
+        console.error(e)
+      }
+    })()
+  }, [])
 
   const [state, setState] = useState<TState>({
     attributes: [],
@@ -77,10 +93,9 @@ export default function MintModal() {
       })
 
       const { nft } = await mintNFT({
-        accessToken: token,
+        accessToken: token.value,
         imageUrl: `https://ipfs.io/ipfs/${imageUrl}`,
-        ownerAddress: _ownerAddress,
-        userId,
+        ownerAddress: _address,
         attributes: state.attributes,
         backgroundColor: state.backgroundColor,
         collection: state.collection,
@@ -95,7 +110,7 @@ export default function MintModal() {
       alert('Token Minted')
     } catch(e) {
       console.error(e)
-      alert('ERRORRR')
+      alert('Unable to mint token. Try again later.')
     } finally {
       handleState('loading', false)
     }

@@ -3,11 +3,6 @@ import { SiweMessage } from 'siwe'
 
 import { contractABI, contractAddress } from '../constants'
 
-type TAuth = {
-  id: string
-  token: string
-}
-
 function isEip1193(p: unknown): p is Eip1193Provider {
   return !!p && typeof (p as any).request === "function"
 }
@@ -16,17 +11,15 @@ const URL = `${process.env.NEXT_PUBLIC_API_URL!}`
 
 let _provider: ethers.BrowserProvider | null = null
 let _connecting = false
-let _body: TAuth
 
-export let _ownerAddress: string
-export let _contract: ethers.Contract | null = null
+let _contract: ethers.Contract | null = null
 
 export const createContract = async () => {
   if(typeof window === "undefined" || !isEip1193(window.ethereum)) {
     throw new Error("No EIP-1193 provider found.")
   }
 
-  if(_contract) return _body
+  if(_contract) return
 
   if(_connecting) {
     await new Promise((res) => {
@@ -38,7 +31,7 @@ export const createContract = async () => {
       }, 50)
     })
 
-    return _body
+    return
   }
 
   try {
@@ -59,7 +52,6 @@ export const createContract = async () => {
     const signer = await _provider.getSigner()
     _contract = new ethers.Contract(contractAddress, contractABI, signer)
     const address = await signer.getAddress()
-    _ownerAddress = address
     const network = await _provider.getNetwork()
     const chainId = Number(network.chainId)
 
@@ -92,19 +84,15 @@ export const createContract = async () => {
 
     const balanceWei = await _provider.getBalance(address)
 
-    const res = await fetch(
+    await fetch(
       `${URL}user/`,
       {
+        credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address, accountBalance: balanceWei.toString() })
       }
     )
-
-    const body = await res.json() as TAuth
-    _body = body
-
-    return body
   } finally {
     _connecting = false
   }
@@ -117,4 +105,22 @@ export const checkEthConnection = async () => {
 
   const accounts = await eth.request({ method: 'eth_accounts' })
   console.log(accounts)
+}
+
+export const createContractOnPageRefresh = async (): Promise<{ address: string, contract: ethers.Contract }> => {
+  if(typeof window === "undefined" || !isEip1193(window.ethereum)) {
+    throw new Error("No EIP-1193 provider found.")
+  }
+
+  const eth = window.ethereum
+  const accounts: [] = await eth.request({ method: 'eth_accounts' })
+
+  if(!accounts || accounts.length < 1) throw new Error('Please sign in to metamask.')
+
+  const provider = new ethers.BrowserProvider(eth)
+  const signer = await provider.getSigner()
+  const address = await signer.getAddress()
+  const contract = new ethers.Contract(contractAddress, contractABI, signer)
+
+  return { address, contract }
 }
