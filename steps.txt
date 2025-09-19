@@ -1,9 +1,0 @@
-client uploads image
-fill up the fields
-button is clicked
-
-image sent to backend
-backend handles pinata ipfs connection
-backend upload images and metadata.json on pinata
-gets image url and metadata url
-mint nft with required fields and save to database
