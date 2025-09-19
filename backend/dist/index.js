@@ -38,11 +38,16 @@ const user_route_1 = __importDefault(require("./routes/user.route"));
     app.addSchema({
         $id: 'ErrorResponse',
         type: 'object',
-        required: ['message', 'ok'],
+        additionalProperties: false,
+        required: ['ok', 'message'],
         properties: {
-            message: { type: 'string' },
-            ok: { type: 'boolean' }
+            ok: { type: 'boolean' },
+            message: { type: 'string' }
         }
+    });
+    app.setErrorHandler((err, req, rep) => {
+        const status = typeof err.statusCode === 'number' ? err.statusCode : 500;
+        rep.code(status).send({ ok: false, message: err.message || 'Internal Server Error.' });
     });
     app.register(nft_route_1.default, { prefix: '/api/nft/' });
     app.register(user_route_1.default, { prefix: '/api/user/' });

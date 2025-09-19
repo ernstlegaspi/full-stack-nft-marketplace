@@ -39,6 +39,10 @@ const NFTSchema = new mongoose_1.Schema({
         type: String,
         required: true
     },
+    nameSlug: {
+        type: String,
+        required: true
+    },
     description: {
         type: String,
         required: true

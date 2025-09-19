@@ -7,9 +7,10 @@ exports.burnNFT = exports.searchNFT = exports.getTokenPerName = exports.getAllUs
 const nft_model_1 = __importDefault(require("../models/nft.model"));
 const user_models_1 = __importDefault(require("../models/user.models"));
 const http_code_1 = require("../utils/http_code");
+const utils_1 = require("../utils");
 const mintNFT = (f) => async (req, rep) => {
     try {
-        const { attributes, backgroundColor, collection, contractAddress, description, imageUrl, metadataUrl, name, ownerAddress } = req.body;
+        const { attributes, backgroundColor, collection, contractAddress, description, imageUrl, metadataUrl, name, nameSlug, ownerAddress } = req.body;
         const { sub: userId } = f.jwt.decode(req.cookies.token);
         const tokenId = await f.redis.incr(contractAddress);
         const nft = await nft_model_1.default.create({
@@ -22,6 +23,7 @@ const mintNFT = (f) => async (req, rep) => {
             imageUrl,
             metadataUrl,
             name,
+            nameSlug,
             ownerAddress,
             ownerId: userId,
             tokenId
@@ -46,7 +48,9 @@ const mintNFT = (f) => async (req, rep) => {
 exports.mintNFT = mintNFT;
 const getAllUserNFT = (f) => async (req, rep) => {
     try {
-        const { address, page } = req.params;
+        const { page: p } = req.params;
+        const page = parseInt(p);
+        const { address } = (0, utils_1.decode)(f, req);
         const limit = 20;
         const key = `all:${address}:p:${page}:l:${limit}`;
         const result = await f.redis.get(key);
@@ -60,7 +64,7 @@ const getAllUserNFT = (f) => async (req, rep) => {
             .select('mintedNFTs -_id')
             .populate({
             path: 'mintedNFTs',
-            select: '-ownerAddress -ownerId -contractAddress',
+            select: '-ownerAddress -ownerId -contractAddress -__v',
             options: {
                 limit,
                 skip: (page - 1) * limit,
@@ -68,21 +72,15 @@ const getAllUserNFT = (f) => async (req, rep) => {
             },
             populate: {
                 path: 'creator',
-                select: '-_id address name'
+                select: '-_id address'
             }
         })
             .lean();
-        if (!nfts) {
-            await f.redis.set(key, JSON.stringify([]), 'EX', 300);
-            return rep.code(200).send({
-                cached: false,
-                nfts: []
-            });
-        }
-        await f.redis.set(key, JSON.stringify(nfts), 'EX', 300);
+        const mintedNFTs = nfts?.mintedNFTs ?? [];
+        await f.redis.set(key, JSON.stringify(mintedNFTs), 'EX', 300);
         return rep.code(200).send({
             cached: false,
-            nfts
+            nfts: mintedNFTs
         });
     }
     catch (e) {
@@ -99,31 +97,26 @@ const getTokenPerName = (f) => async (req, rep) => {
         if (result) {
             return rep.code(200).send({
                 cached: true,
-                nfts: JSON.parse(result)
+                nft: JSON.parse(result)
             });
         }
-        const nfts = await nft_model_1.default.findOne({ name: tokenName })
-            .select('-ownerAddress')
+        const nft = await nft_model_1.default.findOne({ nameSlug: tokenName })
+            .select('-ownerAddress -__v -_id -updatedAt')
             .populate({
             path: 'creator',
-            select: '-_id address name'
+            select: '-_id address'
         })
             .populate({
             path: 'ownerId',
-            select: '-_id address name'
+            select: '-_id address'
         })
             .lean();
-        if (!nfts) {
-            await f.redis.set(key, JSON.stringify([]), 'EX', 300);
-            return rep.code(200).send({
-                cached: false,
-                nfts: []
-            });
-        }
-        await f.redis.set(key, JSON.stringify(nfts), 'EX', 300);
+        if (!nft)
+            return (0, http_code_1._404)(rep, 'no document found.');
+        await f.redis.set(key, JSON.stringify(nft), 'EX', 300);
         return rep.code(200).send({
             cached: false,
-            nfts
+            nft
         });
     }
     catch (e) {
@@ -134,7 +127,8 @@ const getTokenPerName = (f) => async (req, rep) => {
 exports.getTokenPerName = getTokenPerName;
 const searchNFT = (f) => async (req, rep) => {
     try {
-        const { page, search } = req.params;
+        const { page: p, search } = req.params;
+        const page = parseInt(p);
         const limit = 20;
         const key = `search:${search}:p:${page}:l:${limit}`;
         const result = await f.redis.get(key);
@@ -150,7 +144,7 @@ const searchNFT = (f) => async (req, rep) => {
                 $options: 'i'
             }
         })
-            .select('imageUrl name -_id')
+            .select('imageUrl name tokenId -_id')
             .limit(limit)
             .skip((page - 1) * limit)
             .lean();

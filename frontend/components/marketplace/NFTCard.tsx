@@ -1,17 +1,23 @@
-import Image from 'next/image'
+import Link from 'next/link'
 
-import i from '@/public/room1.jpg'
+import { TUserNFTs } from '@/types'
 
-export default function NFTCard() {
-  return <div className='text-bb p-3 w-[250px] border border-g bg-white rounded'>
-    <Image
-      alt="Test Image"
-      src={i}
-      className='w h-[250px] rounded'
-    />
+export default function NFTCard({ nft }: { nft: TUserNFTs }) {
+  const { description, imageUrl, name } = nft
 
-    <p className='font-medium mt-2'>NFT Name</p>
+  return <div className='w-max'>
+    <Link href={`/token/${name.toLowerCase().replaceAll(' ', '-')}`}>
+      <div className='text-bb p-3 w-[250px] border border-g bg-white rounded'>
+        <img
+          alt={name}
+          src={imageUrl}
+          className="w-[250px] h-[250px] rounded"
+        />
 
-    <p>Lorem ipsum dolor sit amet consectetur, adipisicing elit. Velit provident vero quis expedita tempore explicabo soluta labore error quisquam, eaque, repellendus alias natus vel reprehenderit dolorum! Ullam est et eum.</p>
+        <p className='font-medium mt-2'>{name}</p>
+
+        <p>{description}</p>
+      </div>
+    </Link>
   </div>
 }

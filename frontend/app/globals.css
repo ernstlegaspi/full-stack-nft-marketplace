@@ -2,6 +2,7 @@
 
 @theme inline {
   --color-bb: #15202a;
+  --color-hbb: #0E1521;
   --color-w: #faf7f2;
   --color-g: #ccc;
 }
@@ -9,6 +10,10 @@
 @layer utilities {
   .button {
     @apply rounded-[10px] border-2 font-medium p-2 cursor-pointer select-none
+  }
+
+  .button-disabled {
+    @apply bg-gray-300 text-gray-100
   }
 
   .input {
@@ -22,4 +27,12 @@
   .r {
     @apply bg-red-300
   }
+
+  .pt80 {
+    @apply pt-[80px]
+  }
+}
+
+.bshadow {
+  box-shadow: 0 0 10px rgba(0, 0, 0, .2)
 }

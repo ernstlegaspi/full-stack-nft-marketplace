@@ -11,6 +11,7 @@ const nftRequiredFields = [
     'imageUrl',
     'metadataUrl',
     'name',
+    'nameSlug',
     'ownerAddress'
 ];
 const nftAttributesField = {
@@ -55,6 +56,7 @@ function nft(f) {
                     imageUrl: { type: 'string', format: 'uri' },
                     metadataUrl: { type: 'string' },
                     name: { type: 'string', minLength: 2 },
+                    nameSlug: { type: 'string', minLength: 2 },
                     ownerAddress: {
                         type: 'string',
                         pattern: '^0x[a-fA-F0-9]{40}$',
@@ -91,6 +93,7 @@ function nft(f) {
                                 imageUrl: { type: 'string' },
                                 metadataUrl: { type: 'string' },
                                 name: { type: 'string' },
+                                nameSlug: { type: 'string' },
                                 ownerAddress: { type: 'string' },
                                 ownerId: { type: 'string' },
                                 tokenId: { type: 'integer' }
@@ -106,26 +109,20 @@ function nft(f) {
     });
     f.route({
         method: 'GET',
-        url: 'all',
+        url: 'all/:page',
         schema: {
             params: {
                 type: 'object',
                 additionalProperties: false,
-                required: ['address', 'page'],
+                required: ['page'],
                 properties: {
-                    address: {
-                        type: 'string',
-                        pattern: '^0x[0-9a-fA-F]{40}$',
-                        minLength: 42,
-                        maxLength: 42
-                    },
-                    page: { type: 'number', minimum: 1 }
+                    page: { type: 'string' }
                 }
             },
             response: {
                 200: {
                     type: 'object',
-                    additionalPropertes: false,
+                    additionalProperties: false,
                     required: ['cached', 'nfts'],
                     properties: {
                         cached: { type: 'boolean' },
@@ -152,10 +149,9 @@ function nft(f) {
                                     creator: {
                                         type: 'object',
                                         additionalProperties: false,
-                                        required: ['address', 'name'],
+                                        required: ['address'],
                                         properties: {
-                                            address: { type: 'string' },
-                                            name: { type: 'string' }
+                                            address: { type: 'string' }
                                         }
                                     },
                                     description: { type: 'string' },
@@ -176,7 +172,7 @@ function nft(f) {
     });
     f.route({
         method: 'GET',
-        url: 'token',
+        url: 'token/:tokenName',
         schema: {
             params: {
                 type: 'object',
@@ -190,10 +186,10 @@ function nft(f) {
                 200: {
                     type: 'object',
                     additionalProperties: false,
-                    required: ['cached', 'nfts'],
+                    required: ['cached', 'nft'],
                     properties: {
                         cached: { type: 'boolean' },
-                        nfts: {
+                        nft: {
                             type: 'object',
                             additionalProperties: false,
                             required: [
@@ -202,14 +198,16 @@ function nft(f) {
                                 'collection',
                                 'contractAddress',
                                 'creator',
+                                'createdAt',
                                 'description',
                                 'imageUrl',
                                 'metadataUrl',
                                 'name',
+                                'nameSlug',
                                 'ownerId',
                                 'tokenId'
                             ],
-                            propertes: {
+                            properties: {
                                 attributes: nftAttributesField,
                                 backgroundColor: { type: 'string' },
                                 collection: { type: 'string' },
@@ -217,23 +215,23 @@ function nft(f) {
                                 creator: {
                                     type: 'object',
                                     additionalProperties: false,
-                                    required: ['address', 'name'],
+                                    required: ['address'],
                                     properties: {
-                                        address: { type: 'string' },
-                                        name: { type: 'string' }
+                                        address: { type: 'string' }
                                     }
                                 },
+                                createdAt: { type: 'string', format: 'date-time' },
                                 description: { type: 'string' },
                                 imageUrl: { type: 'string' },
                                 metadataUrl: { type: 'string' },
                                 name: { type: 'string' },
+                                nameSlug: { type: 'string' },
                                 ownerId: {
                                     type: 'object',
                                     additionalProperties: false,
-                                    required: ['address', 'name'],
+                                    required: ['address'],
                                     properties: {
-                                        address: { type: 'string' },
-                                        name: { type: 'string' }
+                                        address: { type: 'string' }
                                     }
                                 },
                                 tokenId: { type: 'number' }
@@ -248,14 +246,14 @@ function nft(f) {
     });
     f.route({
         method: 'GET',
-        url: 'search',
+        url: 'search/:page/:search',
         schema: {
             params: {
                 additionalProperties: false,
                 type: 'object',
                 required: ['page', 'search'],
                 properties: {
-                    page: { type: 'number', minimum: 1 },
+                    page: { type: 'string' },
                     search: { type: 'string', minLength: 3 }
                 }
             },
@@ -267,12 +265,16 @@ function nft(f) {
                     properties: {
                         cached: { type: 'boolean' },
                         nfts: {
-                            type: 'object',
-                            additionalProperties: false,
-                            required: ['imageUrl', 'name'],
-                            properties: {
-                                imageUrl: { type: 'string' },
-                                name: { type: 'string' }
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                additionalProperties: false,
+                                required: ['imageUrl', 'name', 'tokenId'],
+                                properties: {
+                                    imageUrl: { type: 'string' },
+                                    name: { type: 'string' },
+                                    tokenId: { type: 'number' }
+                                }
                             }
                         }
                     }

@@ -17,7 +17,7 @@ type TIpfs = {
 type TMetadata = {
   externalUrl: string,
   imageUrl: string
-} & Omit<TNFTInput, 'contractAddress' | 'metadataUrl'>
+} & Omit<TNFTInput, 'contractAddress' | 'metadataUrl' | 'nameSlug'>
 
 // full metadata of nft
 // {

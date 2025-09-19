@@ -6,6 +6,7 @@ export type TNFTInput = {
   description: string
   metadataUrl: string
   name: string
+  nameSlug: string
 }
 
 type TNFT = {
@@ -20,4 +21,28 @@ type TNFT = {
 export type TNFTResponse = {
   ok: boolean
   nft: TNFT
+}
+
+export type TUserNFTs = {
+  attributes: { trait_type: string, value: string }[]
+  backgroundColor: string
+  collection: string
+  creator: { address: string, name: string }
+  description: string
+  imageUrl: string
+  metadataUrl: string
+  name: string
+  tokenId: number
+}
+
+export type TUserNFT = {
+  contractAddress: string
+  createdAt: Date
+  ownerId: { address: string }
+} & TUserNFTs
+
+export type TSearchedNFTs = {
+  imageUrl: string
+  name: string
+  tokenId: number
 }

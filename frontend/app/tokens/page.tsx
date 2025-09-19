@@ -1,6 +1,14 @@
-'use client'
-import { getAllUserNFTs } from "@/actions/nft"
+import { redirect } from "next/navigation"
 
-export default function TokensPage() {
-  return <></>
+import Tokens from "./TokensPage"
+import { useCookies } from "@/utils"
+
+export default async function TokensPage() {
+  const { isAuthenticated } = await useCookies()
+
+  if(!isAuthenticated) redirect('/')
+
+  return <div className='pt80'>
+    <Tokens />
+  </div>
 }

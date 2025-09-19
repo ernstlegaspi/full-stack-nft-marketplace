@@ -2,7 +2,8 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 
 import NFT from '../models/nft.model'
 import User from '../models/user.models'
-import { _400, _500 } from '../utils/http_code'
+import { _400, _404, _500 } from '../utils/http_code'
+import { decode } from '../utils'
 
 type TMintNFT = {
   attributes: [
@@ -18,12 +19,8 @@ type TMintNFT = {
   imageUrl: string
   metadataUrl: string
   name: string
+  nameSlug: string
   ownerAddress: string
-}
-
-type TUserParams = {
-  address: string
-  page: number
 }
 
 export const mintNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body: TMintNFT }>, rep: FastifyReply) => {
@@ -37,6 +34,7 @@ export const mintNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body
       imageUrl,
       metadataUrl,
       name,
+      nameSlug,
       ownerAddress
     } = req.body
 
@@ -53,6 +51,7 @@ export const mintNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body
       imageUrl,
       metadataUrl,
       name,
+      nameSlug,
       ownerAddress,
       ownerId: userId,
       tokenId
@@ -81,10 +80,12 @@ export const mintNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body
   }
 }
 
-export const getAllUserNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Params: TUserParams }>, rep: FastifyReply) => {
+export const getAllUserNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Params: { page: string } }>, rep: FastifyReply) => {
   try {
-    const { address, page } = req.params
+    const { page: p } = req.params
+    const page = parseInt(p)
 
+    const { address } = decode(f, req) as { address: string }
     const limit = 20
     const key = `all:${address}:p:${page}:l:${limit}`
 
@@ -101,7 +102,7 @@ export const getAllUserNFT = (f: FastifyInstance) => async (req: FastifyRequest<
     .select('mintedNFTs -_id')
     .populate({
       path: 'mintedNFTs',
-      select: '-ownerAddress -ownerId -contractAddress',
+      select: '-ownerAddress -ownerId -contractAddress -__v',
       options: {
         limit,
         skip: (page - 1) * limit,
@@ -109,35 +110,22 @@ export const getAllUserNFT = (f: FastifyInstance) => async (req: FastifyRequest<
       },
       populate: {
         path: 'creator',
-        select: '-_id address name'
+        select: '-_id address'
       }
     })
     .lean()
-
-    if(!nfts) {
-      await f.redis.set(
-        key,
-        JSON.stringify([]),
-        'EX',
-        300
-      )
-
-      return rep.code(200).send({
-        cached: false,
-        nfts: []
-      })
-    }
+    const mintedNFTs = nfts?.mintedNFTs ?? []
 
     await f.redis.set(
       key,
-      JSON.stringify(nfts),
+      JSON.stringify(mintedNFTs),
       'EX',
       300
     )
 
     return rep.code(200).send({
       cached: false,
-      nfts
+      nfts: mintedNFTs
     })
   } catch(e) {
     console.error(e)
@@ -155,48 +143,34 @@ export const getTokenPerName = (f: FastifyInstance) => async (req: FastifyReques
     if(result) {
       return rep.code(200).send({
         cached: true,
-        nfts: JSON.parse(result)
+        nft: JSON.parse(result)
       })
     }
 
-    const nfts = await NFT.findOne(
-      { name: tokenName }
-    )
-    .select('-ownerAddress')
+    const nft = await NFT.findOne({ nameSlug: tokenName })
+    .select('-ownerAddress -__v -_id -updatedAt')
     .populate({
       path: 'creator',
-      select: '-_id address name'
+      select: '-_id address'
     })
     .populate({
       path: 'ownerId',
-      select: '-_id address name'
+      select: '-_id address'
     })
     .lean()
 
-    if(!nfts) {
-      await f.redis.set(
-        key,
-        JSON.stringify([]),
-        'EX',
-        300
-      )
-
-      return rep.code(200).send({
-        cached: false,
-        nfts: []
-      })
-    }
+    if(!nft) return _404(rep, 'no document found.')
 
     await f.redis.set(
       key,
-      JSON.stringify(nfts),
+      JSON.stringify(nft),
       'EX',
       300
     )
 
     return rep.code(200).send({
       cached: false,
-      nfts
+      nft
     })
   } catch(e) {
     console.error(e)
@@ -204,9 +178,10 @@ export const getTokenPerName = (f: FastifyInstance) => async (req: FastifyReques
   }
 }
 
-export const searchNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Params: { page: number, search: string } }>, rep: FastifyReply) => {
+export const searchNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Params: { page: string, search: string } }>, rep: FastifyReply) => {
   try {
-    const { page, search } = req.params
+    const { page: p, search } = req.params
+    const page = parseInt(p)
 
     const limit = 20
     const key = `search:${search}:p:${page}:l:${limit}`
@@ -225,7 +200,7 @@ export const searchNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Pa
         $options: 'i'
       }
     })
-    .select('imageUrl name -_id')
+    .select('imageUrl name tokenId -_id')
     .limit(limit)
     .skip((page - 1) * limit)
     .lean()

@@ -1,24 +1,11 @@
-import type { TNFTInput, TNFTResponse } from "@/types"
+import type { TNFTInput, TNFTResponse, TSearchedNFTs, TUserNFT, TUserNFTs } from "@/types"
 
 const url = `${process.env.NEXT_PUBLIC_API_URL!}nft/`
 
 type TInput = {
-  accessToken: string
   imageUrl: string
   ownerAddress: string
 } & TNFTInput
-
-type TUserNFTs = {
-  attributes: { trait_type: string, value: string }[]
-  backgroundColor: string
-  collection: string
-  creator: { address: string, name: string }
-  description: string
-  imageUrl: string
-  metadataUrl: string
-  name: string
-  tokenId: number
-}
 
 export const mintNFT = async (data: TInput): Promise<TNFTResponse> => {
   const res = await fetch(
@@ -27,7 +14,6 @@ export const mintNFT = async (data: TInput): Promise<TNFTResponse> => {
       credentials: 'include',
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${data.accessToken}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(data)
@@ -39,19 +25,53 @@ export const mintNFT = async (data: TInput): Promise<TNFTResponse> => {
   return body
 }
 
-export const getAllUserNFTs = async (accessToken: string, address: string, page: number) => {
+export const getAllUserNFTs = async (page: number) => {
   const res = await fetch(
-    `${url}all/${address}/${page}`,
+    `${url}all/${page}`,
     {
+      credentials: 'include',
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
       }
     }
   )
 
-  const body = await res.json() as TUserNFTs
+  const body = await res.json() as { cached: boolean, nfts: TUserNFTs[] }
 
-  return body
+  return body.nfts
+}
+
+export const getTokenPerName = async (name: string) => {
+  const res = await fetch(
+    `${url}token/${name}`,
+    {
+      credentials: 'include',
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  )
+
+  const body = await res.json() as { cached: boolean, nft: TUserNFT }
+
+  return body.nft
+}
+
+export const searchNFT = async (page: string, search: string) => {
+  const res = await fetch(
+    `${url}search/${page}/${search}`,
+    {
+      credentials: 'include',
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  )
+
+  const body = await res.json() as { cached: boolean, nfts: TSearchedNFTs[] }
+
+  return body.nfts
 }

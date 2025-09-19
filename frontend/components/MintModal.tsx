@@ -3,12 +3,10 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import { IoAddSharp, IoCloseSharp } from 'react-icons/io5'
 import { FaCheck } from "react-icons/fa6"
-import { RequestCookie } from 'next/dist/compiled/@edge-runtime/cookies'
 
 import { TNFTInput } from '@/types'
 import { mintNFT } from '@/actions/nft'
 import { showMintModal } from '@/states/showMintModal'
-import { useUserId } from '@/states/userId'
 import { contractAddress } from '@/constants'
 import { uploadImageToPinata, uploadMetadataToPinata } from '@/actions/pinata'
 import { createContractOnPageRefresh } from '@/utils/nft'
@@ -24,9 +22,8 @@ type TState = {
   value: string
 } & Omit<TNFTInput, 'metadataUrl'>
 
-export default function MintModal({ token }: { token: RequestCookie }) {
+export default function MintModal() {
   const { isShown, setIsShown } = showMintModal()
-  const { userId } = useUserId()
 
   const [_contract, setContract] = useState<ethers.Contract>()
   const [_address, setAddress] = useState('')
@@ -53,6 +50,7 @@ export default function MintModal({ token }: { token: RequestCookie }) {
     contractAddress: contractAddress,
     description: '',
     name: '',
+    nameSlug: '',
 
     isAddingAttributes: false,
     isImagePng: false,
@@ -93,7 +91,6 @@ export default function MintModal({ token }: { token: RequestCookie }) {
       })
 
       const { nft } = await mintNFT({
-        accessToken: token.value,
         imageUrl: `https://ipfs.io/ipfs/${imageUrl}`,
         ownerAddress: _address,
         attributes: state.attributes,
@@ -102,6 +99,7 @@ export default function MintModal({ token }: { token: RequestCookie }) {
         contractAddress: state.contractAddress,
         description: state.description,
         name: state.name,
+        nameSlug: state.name.toLowerCase().replaceAll(' ', '-'),
         metadataUrl
       })
 
@@ -287,14 +285,16 @@ export default function MintModal({ token }: { token: RequestCookie }) {
       <div className='flex items-center mt-4'>
         <button
           aria-label='Done'
-          className='pointer bg-bb w-full text-w p-2 rounded-sm'
+          className={`${state.loading ? 'button-disabled' : 'bg-bb text-w pointer'} w-full p-2 rounded-sm`}
+          disabled={state.loading}
           onClick={onClick}
         >
           Mint
         </button>
         <button
           aria-label='Cancel'
-          className='pointer bg-red-300 w-full ml-2 text-bb p-2 rounded-sm'
+          className={`${state.loading ? 'button-disabled' : 'bg-red-300 text-bb pointer'} w-full ml-2 p-2 rounded-sm`}
+          disabled={state.loading}
           onClick={() => {
             setIsShown(false)
           }}
