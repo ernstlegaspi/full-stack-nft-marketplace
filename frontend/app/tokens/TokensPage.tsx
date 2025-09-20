@@ -1,12 +1,12 @@
 'use client'
 
 import { getAllUserNFTs } from "@/actions/nft"
-import NFTCard from "@/components/marketplace/NFTCard"
-import { TUserNFTs } from "@/types"
+import NFTCard from "@/components/NFTCard"
+import { TDisplayedNFT } from "@/types"
 import { useEffect, useState } from "react"
 
 export default function Tokens() {
-  const [nfts, setNFTs] = useState<TUserNFTs[]>([])
+  const [nfts, setNFTs] = useState<TDisplayedNFT[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export default function Tokens() {
   if(loading) return <Skeleton />
   if(nfts.length < 1) return <p>No current NFTs.</p>
 
-  return <div className="grid grid-cols-6 place-items-center">
+  return <div className='grid gap-8 grid-repeat place-items-center max-[560px]:flex max-[560px]:flex-col max-[560px]:justify-center'>
     {
       nfts.map((nft, idx) => <NFTCard key={idx} nft={nft} />)
     }

@@ -1,9 +1,12 @@
-import dynamic from 'next/dynamic'
+import Marketplace from "@/components/Marketplace"
+import { getAllTokens } from "@/actions/nft"
 
-import Marketplace from '@/components/marketplace'
+export default async function App() {
+  const tokens = await getAllTokens('1')
 
-export default function App() {
   return <div className='pt-[80px]'>
-    <Marketplace />
+    <p className='font-medium text-[20px] mb-3'>Marketplace</p>
+
+    <Marketplace tokens={tokens} />
   </div>
 }

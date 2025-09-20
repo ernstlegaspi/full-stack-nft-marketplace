@@ -27,7 +27,6 @@ const nftAttributesField = {
         }
     }
 };
-// all = address page
 function nft(f) {
     f.route({
         method: 'POST',
@@ -109,7 +108,7 @@ function nft(f) {
     });
     f.route({
         method: 'GET',
-        url: 'all/:page',
+        url: 'all/user/:page',
         schema: {
             params: {
                 type: 'object',
@@ -269,10 +268,11 @@ function nft(f) {
                             items: {
                                 type: 'object',
                                 additionalProperties: false,
-                                required: ['imageUrl', 'name', 'tokenId'],
+                                required: ['imageUrl', 'name', 'nameSlug', 'tokenId'],
                                 properties: {
                                     imageUrl: { type: 'string' },
                                     name: { type: 'string' },
+                                    nameSlug: { type: 'string' },
                                     tokenId: { type: 'number' }
                                 }
                             }
@@ -283,5 +283,46 @@ function nft(f) {
             }
         },
         handler: (0, nft_controller_1.searchNFT)(f)
+    });
+    f.route({
+        method: 'GET',
+        url: 'all/:page',
+        schema: {
+            params: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['page'],
+                properties: {
+                    page: { type: 'string' }
+                }
+            },
+            response: {
+                200: {
+                    type: 'object',
+                    additionalProperties: false,
+                    required: ['cached', 'nfts'],
+                    properties: {
+                        cached: { type: 'boolean' },
+                        nfts: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                additionalProperties: false,
+                                required: ['imageUrl', 'name', 'nameSlug', 'description'],
+                                properties: {
+                                    imageUrl: { type: 'string' },
+                                    name: { type: 'string' },
+                                    nameSlug: { type: 'string' },
+                                    description: { type: 'string' }
+                                }
+                            }
+                        }
+                    }
+                },
+                400: { $ref: 'ErrorResponse#' },
+                500: { $ref: 'ErrorResponse#' }
+            }
+        },
+        handler: (0, nft_controller_1.getAllTokens)(f)
     });
 }

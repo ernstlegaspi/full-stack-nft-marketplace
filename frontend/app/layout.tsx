@@ -18,7 +18,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const { isAuthenticated } = await useCookies()
 
   return <html lang="en">
-    <body className='antialiased bg-w min-h-screen overflow-hidden'>
+    <body className='antialiased bg-w min-h-screen'>
       { isAuthenticated ? <MintModal /> : null }
 
       <Header isAuthenticated={isAuthenticated} />

@@ -1,14 +1,9 @@
 import Link from "next/link"
-import { redirect } from "next/navigation"
 import { format } from 'date-fns'
 
-import { useCookies } from "@/utils"
 import { getTokenPerName } from "@/actions/nft"
 
 export default async function TokenPage({ params }: { params: Promise<{ name: string }> }) {
-  const { isAuthenticated } = await useCookies()
-  if(!isAuthenticated) redirect('/')
-
   const n = (await params).name
   const res = await getTokenPerName(n)
 

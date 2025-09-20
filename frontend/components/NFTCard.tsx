@@ -1,13 +1,13 @@
 import Link from 'next/link'
 
-import { TUserNFTs } from '@/types'
+import { TDisplayedNFT } from '@/types'
 
-export default function NFTCard({ nft }: { nft: TUserNFTs }) {
-  const { description, imageUrl, name } = nft
+export default function NFTCard({ nft }: { nft: TDisplayedNFT }) {
+  const { description, imageUrl, name, nameSlug } = nft
 
   return <div className='w-max'>
-    <Link href={`/token/${name.toLowerCase().replaceAll(' ', '-')}`}>
-      <div className='text-bb p-3 w-[250px] border border-g bg-white rounded'>
+    <Link href={`/token/${nameSlug}`}>
+      <div className='text-bb h-[400px] p-3 w-[250px] border border-g bg-white rounded'>
         <img
           alt={name}
           src={imageUrl}

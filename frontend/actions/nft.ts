@@ -1,4 +1,4 @@
-import type { TNFTInput, TNFTResponse, TSearchedNFTs, TUserNFT, TUserNFTs } from "@/types"
+import type { TDisplayedNFT, TNFTInput, TNFTResponse, TSearchedNFT, TUserNFT } from "@/types"
 
 const url = `${process.env.NEXT_PUBLIC_API_URL!}nft/`
 
@@ -27,7 +27,7 @@ export const mintNFT = async (data: TInput): Promise<TNFTResponse> => {
 
 export const getAllUserNFTs = async (page: number) => {
   const res = await fetch(
-    `${url}all/${page}`,
+    `${url}all/user/${page}`,
     {
       credentials: 'include',
       method: 'GET',
@@ -37,7 +37,7 @@ export const getAllUserNFTs = async (page: number) => {
     }
   )
 
-  const body = await res.json() as { cached: boolean, nfts: TUserNFTs[] }
+  const body = await res.json() as { cached: boolean, nfts: TDisplayedNFT[] }
 
   return body.nfts
 }
@@ -59,6 +59,23 @@ export const getTokenPerName = async (name: string) => {
   return body.nft
 }
 
+export const getAllTokens = async (page: string) => {
+  const res = await fetch(
+    `${url}all/${page}`,
+    {
+      credentials: 'include',
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  )
+
+  const body = await res.json() as { cached: boolean, nfts: TDisplayedNFT[] }
+
+  return body.nfts
+}
+
 export const searchNFT = async (page: string, search: string) => {
   const res = await fetch(
     `${url}search/${page}/${search}`,
@@ -71,7 +88,7 @@ export const searchNFT = async (page: string, search: string) => {
     }
   )
 
-  const body = await res.json() as { cached: boolean, nfts: TSearchedNFTs[] }
+  const body = await res.json() as { cached: boolean, nfts: TSearchedNFT[] }
 
   return body.nfts
 }

@@ -23,6 +23,9 @@ type TMintNFT = {
   ownerAddress: string
 }
 
+const allTokensKeys = 'all:tokens'
+const allUserTokensKeys = 'all:user:tokens'
+
 export const mintNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body: TMintNFT }>, rep: FastifyReply) => {
   try {
     const {
@@ -68,7 +71,17 @@ export const mintNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body
 
     const { createdAt, updatedAt, ...rest } = nft.toObject()
 
-    await f.redis.del(`all:${ownerAddress}`)
+    const allTokens = await f.redis.smembers(allTokensKeys)
+    const allUserTokens = await f.redis.smembers(allUserTokensKeys)
+    const pipe = f.redis.pipeline()
+
+    console.log(allTokens)
+    console.log(allUserTokens)
+
+    if(allTokens.length > 0) pipe.unlink(...allTokens).unlink(allTokensKeys)
+    if(allUserTokens.length > 0) pipe.unlink(...allUserTokens).unlink(allUserTokensKeys)
+
+    await pipe.exec()
 
     return rep.code(201).send({
       ok: true,
@@ -122,6 +135,8 @@ export const getAllUserNFT = (f: FastifyInstance) => async (req: FastifyRequest<
       'EX',
       300
     )
+
+    await f.redis.sadd(allUserTokensKeys, key)
 
     return rep.code(200).send({
       cached: false,
@@ -200,7 +215,7 @@ export const searchNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Pa
         $options: 'i'
       }
     })
-    .select('imageUrl name tokenId -_id')
+    .select('imageUrl name nameSlug tokenId -_id')
     .limit(limit)
     .skip((page - 1) * limit)
     .lean()
@@ -230,6 +245,45 @@ export const searchNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Pa
       cached: false,
       nfts
     })
+  } catch(e) {
+    console.error(e)
+    _500(rep)
+  }
+}
+
+export const getAllTokens = (f: FastifyInstance) => async (req: FastifyRequest<{ Params: { page: string } }>, rep: FastifyReply) => {
+  try {
+    const { page: p } = req.params
+    const page = parseInt(p)
+
+    if(page === 0) return _400(rep, 'invalid page.')
+
+    const limit = 20
+    const key = `all:p:${page}:l:${limit}`
+    const result = await f.redis.get(key)
+
+    // if(result) {
+    //   console.log('test')
+    //   return rep.code(200).send({ cached: true, nfts: JSON.parse(result) })
+    // }
+
+    const doc = await NFT.find()
+    .select('-_id imageUrl name nameSlug description')
+    .sort({ createdAt: -1 })
+    .lean()
+
+    const nfts = doc ?? []
+
+    await f.redis.set(
+      key,
+      JSON.stringify(nfts),
+      'EX',
+      300
+    )
+
+    await f.redis.sadd(allTokensKeys, key)
+
+    return rep.code(200).send({ cached: false, nfts })
   } catch(e) {
     console.error(e)
     _500(rep)

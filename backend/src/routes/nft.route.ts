@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { getAllUserNFT, getTokenPerName, mintNFT, searchNFT } from '../controller/nft.controller'
+import { getAllTokens, getAllUserNFT, getTokenPerName, mintNFT, searchNFT } from '../controller/nft.controller'
 
 const nftRequiredFields = [
   'attributes',
@@ -27,8 +27,6 @@ const nftAttributesField = {
     }
   }
 } as const
-
-// all = address page
 
 export default function nft(f: FastifyInstance) {
   f.route({
@@ -112,7 +110,7 @@ export default function nft(f: FastifyInstance) {
 
   f.route({
     method: 'GET',
-    url: 'all/:page',
+    url: 'all/user/:page',
     schema: {
       params: {
         type: 'object',
@@ -274,10 +272,11 @@ export default function nft(f: FastifyInstance) {
               items: {
                 type: 'object',
                 additionalProperties: false,
-                required: ['imageUrl', 'name', 'tokenId'],
+                required: ['imageUrl', 'name', 'nameSlug', 'tokenId'],
                 properties: {
                   imageUrl: { type: 'string' },
                   name: { type: 'string' },
+                  nameSlug: { type: 'string' },
                   tokenId: { type: 'number' }
                 }
               }
@@ -288,5 +287,47 @@ export default function nft(f: FastifyInstance) {
       }
     },
     handler: searchNFT(f)
+  })
+
+  f.route({
+    method: 'GET',
+    url: 'all/:page',
+    schema: {
+      params: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['page'],
+        properties: {
+          page: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['cached', 'nfts'],
+          properties: {
+            cached: { type: 'boolean' },
+            nfts: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['imageUrl', 'name', 'nameSlug', 'description'],
+                properties: {
+                  imageUrl: { type: 'string' },
+                  name: { type: 'string' },
+                  nameSlug: { type: 'string' },
+                  description: { type: 'string' }
+                }
+              }
+            }
+          }
+        },
+        400: { $ref: 'ErrorResponse#' },
+        500: { $ref: 'ErrorResponse#' }
+      }
+    },
+    handler: getAllTokens(f)
   })
 }

@@ -23,7 +23,7 @@ export type TNFTResponse = {
   nft: TNFT
 }
 
-export type TUserNFTs = {
+type TUserNFTs = {
   attributes: { trait_type: string, value: string }[]
   backgroundColor: string
   collection: string
@@ -41,8 +41,16 @@ export type TUserNFT = {
   ownerId: { address: string }
 } & TUserNFTs
 
-export type TSearchedNFTs = {
+export type TSearchedNFT = {
   imageUrl: string
   name: string
+  nameSlug: string
   tokenId: number
+}
+
+export type TDisplayedNFT =  {
+  description: string
+  imageUrl: string
+  name: string
+  nameSlug: string
 }

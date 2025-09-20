@@ -1,15 +1,15 @@
 'use client'
 
+import Link from "next/link"
 import { ChangeEvent, useState } from "react"
-import { IoIosSearch } from "react-icons/io"
 
 import { searchNFT } from "@/actions/nft"
-import { TSearchedNFTs } from "@/types"
+import { TSearchedNFT } from "@/types"
 
 export default function Search() {
   const [search, setSearch] = useState('')
-  const [page, setPage] = useState(1)
-  const [nfts, setNFTs] = useState<TSearchedNFTs[]>([])
+  const [page, setPage] = useState(1) // todo
+  const [nfts, setNFTs] = useState<TSearchedNFT[]>([])
   const [loading, setLoading] = useState(true)
 
   const handleSearch = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -24,8 +24,6 @@ export default function Search() {
 
       const res = await searchNFT(page.toString(), val)
 
-      console.log(res)
-
       setNFTs(res)
     } catch(e) {
       console.error(e)
@@ -34,18 +32,20 @@ export default function Search() {
     }
   }
 
-  const SearchResultCard = ({ imageUrl, name, tokenId }: { imageUrl: string, name: string, tokenId: number }) => <div className='p-2 flex pointer rounded transaition-all hover:bg-gray-200'>
-    <img
-      alt={name}
-      src={imageUrl}
-      className='w-[50px] h-[50px] rounded'
-    />
+  const SearchResultCard = ({ imageUrl, name, nameSlug, tokenId }: TSearchedNFT) => {
+  return <Link href={`/token/${nameSlug}`} className='p-2 flex pointer rounded transaition-all hover:bg-gray-200'>
+      <img
+        alt={name}
+        src={imageUrl}
+        className='w-[50px] h-[50px] rounded'
+      />
 
-    <div>
-      <p className='text-[14px] ml-2'><span className='font-medium'>Token Name: </span> {name}</p>
-      <p className='text-[14px] ml-2'><span className='font-medium'>Token ID: </span> {tokenId}</p>
-    </div>
-  </div>
+      <div>
+        <p className='text-[14px] ml-2'><span className='font-medium'>Token Name: </span> {name}</p>
+        <p className='text-[14px] ml-2'><span className='font-medium'>Token ID: </span> {tokenId}</p>
+      </div>
+    </Link>
+  }
 
   const Skeleton = () => <div className='animate-pulse p-2 flex rounded'>
     <div className='w-[50px] h-[50px] rounded bg-gray-300'></div>
@@ -57,32 +57,39 @@ export default function Search() {
   </div>
 
   return <div>
-    <div className='w-[300px] flex items-center bg-white border-bb border rounded-[2px] ml-3 h-[30px]'>
-      <div className='h-full w-[35px] pointer flex items-center justify-center'>
-        <IoIosSearch size={20} />
-      </div>
-      <input
-        className=' size-full outline-none placeholder:text-[14px] text-[14px]'
-        placeholder='Search for token via token name' name='search'
-        type='text'
-        value={search}
-        onChange={handleSearch}
-      />
-    </div>
+    <input
+      className='
+      bg-white border border-bb p-2 rounded-[2px] ml-2 w-[300px]
+        size-full outline-none placeholder:text-[14px] text-[14px]
+        max-[560px]:w-[95%] max-[560px]:mx-auto max-[560px]:block
+      '
+      placeholder='Search for token via token name' name='search'
+      type='text'
+      value={search}
+      onChange={handleSearch}
+    />
 
     {
-      search.length >= 3 ? <div className={`${nfts.length <= 3 ? 'h-auto' : 'h-[200px] overflow-y-scroll'} z-[30] bg-white bshadow w-[300px] absolute ml-[12px] mt-1 rounded`}>
-        {
-          loading ? <Skeleton />
-          : !loading && nfts.length < 1 ? <p>No searchable nfts.</p>
-          : nfts.map(nft => <SearchResultCard
-            key={nft.name}
-            imageUrl={nft.imageUrl}
-            name={nft.name}
-            tokenId={nft.tokenId}
-          />)
-        }
-      </div> : null
+      search.length >= 3 ? <>
+        <div
+          className={`
+            ${nfts.length <= 3 ? 'h-auto' : 'h-[200px] overflow-y-scroll'} z-[30]
+            bg-white bshadow w-[300px] absolute ml-[8px] mt-1 rounded
+            max-[560px]:w-[95%] max-[560px]:left-1/2 max-[560px]:-translate-x-1/2 max-[560px]:ml-0
+          `}>
+          {
+            loading ? <Skeleton />
+            : !loading && nfts.length < 1 ? <p className='p-2'>No searchable nfts.</p>
+            : nfts.map(nft => <SearchResultCard
+              key={nft.name}
+              imageUrl={nft.imageUrl}
+              name={nft.name}
+              nameSlug={nft.nameSlug}
+              tokenId={nft.tokenId}
+            />)
+          }
+        </div>
+      </> : null
     }
   </div>
 }
