@@ -308,8 +308,9 @@ function nft(f) {
                             items: {
                                 type: 'object',
                                 additionalProperties: false,
-                                required: ['imageUrl', 'name', 'nameSlug', 'description'],
+                                required: ['backgroundColor', 'imageUrl', 'name', 'nameSlug', 'description'],
                                 properties: {
+                                    backgroundColor: { type: 'string' },
                                     imageUrl: { type: 'string' },
                                     name: { type: 'string' },
                                     nameSlug: { type: 'string' },

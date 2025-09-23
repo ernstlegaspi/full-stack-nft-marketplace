@@ -193,7 +193,7 @@ const getAllTokens = (f) => async (req, rep) => {
         //   return rep.code(200).send({ cached: true, nfts: JSON.parse(result) })
         // }
         const doc = await nft_model_1.default.find()
-            .select('-_id imageUrl name nameSlug description')
+            .select('-_id backgroundColor imageUrl name nameSlug description')
             .sort({ createdAt: -1 })
             .lean();
         const nfts = doc ?? [];

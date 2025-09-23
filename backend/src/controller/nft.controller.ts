@@ -268,7 +268,7 @@ export const getAllTokens = (f: FastifyInstance) => async (req: FastifyRequest<{
     // }
 
     const doc = await NFT.find()
-    .select('-_id imageUrl name nameSlug description')
+    .select('-_id backgroundColor imageUrl name nameSlug description')
     .sort({ createdAt: -1 })
     .lean()
 

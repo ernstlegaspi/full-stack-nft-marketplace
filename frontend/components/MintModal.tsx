@@ -3,6 +3,8 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import { IoAddSharp, IoCloseSharp } from 'react-icons/io5'
 import { FaCheck } from "react-icons/fa6"
+import { HexColorPicker } from "react-colorful"
+import { z } from 'zod'
 
 import { TNFTInput } from '@/types'
 import { mintNFT } from '@/actions/nft'
@@ -11,6 +13,7 @@ import { contractAddress } from '@/constants'
 import { uploadImageToPinata, uploadMetadataToPinata } from '@/actions/pinata'
 import { createContractOnPageRefresh } from '@/utils/nft'
 import { ethers } from 'ethers'
+import { zMintNFT } from '@/zod'
 
 type TState = {
   isAddingAttributes: boolean
@@ -75,6 +78,34 @@ export default function MintModal() {
         return
       }
 
+      const { attributes, collection, description, name } = state
+
+      const result = zMintNFT.safeParse({
+        attributes,
+        collection,
+        description,
+        name
+      })
+
+      if(attributes.length < 1 && !collection && !description && !name) {
+        alert('All fields are required!')
+        return
+      }
+
+      if(!result.success) {
+        const err = z.treeifyError(result.error).properties
+
+        alert(
+          err?.name?.errors
+          || err?.collection?.errors
+          || err?.description?.errors
+          || err?.attributes?.errors
+          || 'Unable to mint. Try again.'
+        )
+
+        return
+      }
+
       handleState('loading', true)
 
       const imageUrl = await uploadImageToPinata(state.uploadedImage)
@@ -106,6 +137,20 @@ export default function MintModal() {
       await _contract.mintNFT(nft.tokenId, `ipfs://${metadataUrl}`)
 
       alert('Token Minted')
+      
+      handleState('attributes', [])
+      handleState('backgroundColor', '#ffffff')
+      handleState('collection', '')
+      handleState('description', '')
+      handleState('name', '')
+      handleState('nameSlug', '')
+      handleState('isAddingAttributes', false)
+      handleState('isImagePng', false)
+      handleState('imageURI', '')
+      handleState('key', '')
+      handleState('loading', false)
+      handleState('uploadedImage', null)
+      handleState('value', '')
     } catch(e) {
       console.error(e)
       alert('Unable to mint token. Try again later.')
@@ -121,6 +166,8 @@ export default function MintModal() {
   const Label = ({ label }: { label: string }) => <p className='text-bb mb-1 font-medium'>{label}</p>
 
   const handleCheck = () => {
+    if(state.loading) return
+
     state.attributes.push({ trait_type: state.key, value: state.value })
 
     handleState('key', '')
@@ -152,7 +199,7 @@ export default function MintModal() {
   }
 
   const uploadImageClick = () => {
-    if(!imageRef.current) return
+    if(!imageRef.current || state.loading) return
 
     imageRef.current.click()
   }
@@ -161,27 +208,35 @@ export default function MintModal() {
     <div className='w-[400px] border-2 border-bb rounded bg-white p-4'>
       <p className='font-medium text-[24px] mb-6'>Mint a new NFT</p>
 
-      <button
-        aria-label='Upload NFT Image'
-        className='
-          select-none flex w-full items-center justify-center h-[200px] rounded
-          border-dashed border border-g cursor-pointer transition-all hover:bg-g
-        '
-        onClick={uploadImageClick}
-        style={{
-          backgroundImage: `url(${state.imageURI})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
-        }}
-      >
-        {
-          state.imageURI ? null
-          : <>
-            <IoAddSharp className='text-[20px] mr-2 mt-[1px]' />
-            <p>Upload NFT Image</p>
-          </>
-        }
-      </button>
+      <div className='h-[200px] w-full relative'>
+        <div className='absolute size-full z-[1]' style={{ background: state.backgroundColor }} >
+
+        </div>
+
+        <button
+          aria-label='Upload NFT Image'
+          disabled={state.loading}
+          className={`
+            ${state.loading ? 'cursor-default' : 'hover:bg-g pointer'}
+            select-none flex size-full relative z-[2] items-center justify-center rounded
+            border-dashed border border-g cursor-pointer transition-all
+          `}
+          onClick={uploadImageClick}
+          style={{
+            backgroundImage: `url(${state.imageURI})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
+        >
+          {
+            state.imageURI ? null
+            : <>
+              <IoAddSharp className='text-[20px] mr-2 mt-[1px]' />
+              <p>Upload NFT Image</p>
+            </>
+          }
+        </button>
+      </div>
 
       {
         state.imageURI ? <p className='mt-2'><span className='font-medium'>Image name:</span> {state.uploadedImage!.name}</p>
@@ -198,15 +253,22 @@ export default function MintModal() {
 
       {
         state.isImagePng ? <div className='mt-3'>
-          <Label label='Background Color' />
-          <input className='input' name='backgroundColor' />
+          <Label label='Choose Background Color' />
+          <HexColorPicker
+            color={state.backgroundColor}
+            onChange={color => {
+              handleState('backgroundColor', color)
+            }}
+          />
+          <p><span className='font-medium'>Color: </span>{state.backgroundColor}</p>
         </div> : null
       }
 
       <div className='my-3'>
         <Label label='Name' />
         <input
-          className='input'
+          disabled={state.loading}
+          className={`${state.loading ? 'input-disabled' : ''} input`}
           name='name'
           value={state.name}
           onChange={e => handleState('name', e.target.value)}
@@ -215,7 +277,8 @@ export default function MintModal() {
 
       <Label label='Collection' />
       <input
-        className='input'
+        disabled={state.loading}
+        className={`${state.loading ? 'input-disabled' : ''} input`}
         name='collection'
         placeholder='e.g. Room Series'
         value={state.collection}
@@ -225,7 +288,13 @@ export default function MintModal() {
       <div className='mt-3 mb-2'>
         <Label label='Description' />
         <textarea
-          className='resize-none input' name='description' value={state.description} onChange={e => handleState('description', e.target.value)}></textarea>
+          disabled={state.loading}
+          className={`${state.loading ? 'input-disabled' : ''} resize-none input`}
+          name='description'
+          value={state.description}
+          onChange={e => handleState('description', e.target.value)}
+        >
+        </textarea>
       </div>
 
       <div className='flex items-center'>
@@ -233,9 +302,18 @@ export default function MintModal() {
 
         {
           state.isAddingAttributes ? null
-          : <div className='rounded-full border border-bb ml-2 pointer' onClick={() => handleState('isAddingAttributes', true)}>
+          : <button
+            aria-label='Add Attributes'
+            disabled={state.loading}
+            className={`${state.loading ? 'cursor-default' : 'pointer'} rounded-full border border-bb ml-2`}
+            onClick={() => {
+              if(state.loading) return
+
+              handleState('isAddingAttributes', true)
+            }
+          }>
             <IoAddSharp />
-          </div>
+          </button>
         }
       </div>
 
@@ -250,7 +328,8 @@ export default function MintModal() {
       {
         state.isAddingAttributes ? <div className='flex items-center'>
           <input
-            className='input'
+            disabled={state.loading}
+            className={`${state.loading ? 'input-disabled' : ''} input`}
             name='key'
             placeholder='e.g. Theme'
             value={state.key}
@@ -259,8 +338,8 @@ export default function MintModal() {
             }}
           />
           <input
-            className='ml-2
-            input'
+            disabled={state.loading}
+            className={`${state.loading ? 'input-disabled' : ''} ml-2 input`}
             name='value'
             placeholder='e.g. Minimalist'
             value={state.value}
@@ -274,6 +353,8 @@ export default function MintModal() {
           </div>
 
           <div className='text-red-400 ml-1 pointer h-[40px] flex items-center px-1' onClick={() => {
+            if(state.loading) return
+
             handleState('isAddingAttributes', false)
           }}>
             <IoCloseSharp />

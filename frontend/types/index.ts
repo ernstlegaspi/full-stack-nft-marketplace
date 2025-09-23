@@ -48,7 +48,8 @@ export type TSearchedNFT = {
   tokenId: number
 }
 
-export type TDisplayedNFT =  {
+export type TDisplayedNFT = {
+  backgroundColor: string
   description: string
   imageUrl: string
   name: string

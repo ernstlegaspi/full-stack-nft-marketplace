@@ -20,6 +20,10 @@
     @apply w-full border border-g rounded-sm outline-none p-2
   }
 
+  .input-disabled {
+    @apply bg-gray-200 text-gray-300
+  }
+
   .pointer {
     @apply cursor-pointer
   }

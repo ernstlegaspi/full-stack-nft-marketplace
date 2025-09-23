@@ -25,11 +25,15 @@ export default async function TokenPage({ params }: { params: Promise<{ name: st
   return <div className='flex items-center justify-center min-h-screen'>
     <div className='p-4 bg-white bshadow rounded'>
       <div className='flex'>
-        <img
-          alt={res.name}
-          src={res.imageUrl}
-          className='h-[250px] w-[250px] rounded max-[680px]:mx-auto'
-        />
+        <div className='w-[250px] h-[250px] relative overflow-hidden'>
+          <div className='absolute z-[1] size-full' style={{ background: res.backgroundColor }}></div>
+
+          <img
+            alt={res.name}
+            src={res.imageUrl}
+            className='size-full z-[2] relative rounded max-[680px]:mx-auto'
+          />
+        </div>
 
         <div className='ml-3 max-[680px]:hidden'>
           <Details />
