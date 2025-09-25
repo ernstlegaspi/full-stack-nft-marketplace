@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { getAllTokens, getAllUserNFT, getTokenPerName, mintNFT, searchNFT } from '../controller/nft.controller'
+import { getAllTokens, getAllUserNFT, getNFTsBySearch, getTokenPerName, mintNFT, searchNFT } from '../controller/nft.controller'
 
 const nftRequiredFields = [
   'attributes',
@@ -249,14 +249,13 @@ export default function nft(f: FastifyInstance) {
 
   f.route({
     method: 'GET',
-    url: 'search/:page/:search',
+    url: 'search/:search',
     schema: {
       params: {
         additionalProperties: false,
         type: 'object',
-        required: ['page', 'search'],
+        required: ['search'],
         properties: {
-          page: { type: 'string' },
           search: { type: 'string', minLength: 3 }
         }
       },
@@ -264,9 +263,10 @@ export default function nft(f: FastifyInstance) {
         200: {
           additionalProperties: false,
           type: 'object',
-          required: ['cached', 'nfts'],
+          required: ['cached', 'hasMore', 'nfts'],
           properties: {
             cached: { type: 'boolean' },
+            hasMore: { type: 'boolean' },
             nfts: {
               type: 'array',
               items: {
@@ -305,9 +305,10 @@ export default function nft(f: FastifyInstance) {
         200: {
           type: 'object',
           additionalProperties: false,
-          required: ['cached', 'nfts'],
+          required: ['cached', 'hasMore', 'nfts'],
           properties: {
             cached: { type: 'boolean' },
+            hasMore: { type: 'boolean' },
             nfts: {
               type: 'array',
               items: {
@@ -330,5 +331,49 @@ export default function nft(f: FastifyInstance) {
       }
     },
     handler: getAllTokens(f)
+  })
+
+  f.route({
+    method: 'GET',
+    url: 'search-page/:page/:search',
+    schema: {
+      params: {
+        additionalProperties: false,
+        type: 'object',
+        required: ['page', 'search'],
+        properties: {
+          page: { type: 'string' },
+          search: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['cached', 'hasMore', 'nfts'],
+          properties: {
+            cached: { type: 'boolean' },
+            hasMore: { type: 'boolean' },
+            nfts: {
+              type: 'array',
+              items: {
+                additionalProperties: false,
+                required: ['backgroundColor', 'description', 'imageUrl', 'name', 'nameSlug'],
+                type: 'object',
+                properties: {
+                  backgroundColor: { type: 'string' },
+                  description: { type: 'string' },
+                  imageUrl: { type: 'string' },
+                  name: { type: 'string' },
+                  nameSlug: { type: 'string' }
+                }
+              }
+            }
+          }
+        },
+        500: { $ref: 'ErrorResponse#' }
+      }
+    },
+    handler: getNFTsBySearch(f)
   })
 }

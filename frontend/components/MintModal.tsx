@@ -14,6 +14,7 @@ import { uploadImageToPinata, uploadMetadataToPinata } from '@/actions/pinata'
 import { createContractOnPageRefresh } from '@/utils/nft'
 import { ethers } from 'ethers'
 import { zMintNFT } from '@/zod'
+import { useRouter } from 'next/navigation'
 
 type TState = {
   isAddingAttributes: boolean
@@ -26,6 +27,7 @@ type TState = {
 } & Omit<TNFTInput, 'metadataUrl'>
 
 export default function MintModal() {
+  const router = useRouter()
   const { isShown, setIsShown } = showMintModal()
 
   const [_contract, setContract] = useState<ethers.Contract>()
@@ -137,20 +139,7 @@ export default function MintModal() {
       await _contract.mintNFT(nft.tokenId, `ipfs://${metadataUrl}`)
 
       alert('Token Minted')
-      
-      handleState('attributes', [])
-      handleState('backgroundColor', '#ffffff')
-      handleState('collection', '')
-      handleState('description', '')
-      handleState('name', '')
-      handleState('nameSlug', '')
-      handleState('isAddingAttributes', false)
-      handleState('isImagePng', false)
-      handleState('imageURI', '')
-      handleState('key', '')
-      handleState('loading', false)
-      handleState('uploadedImage', null)
-      handleState('value', '')
+      window.location.reload()
     } catch(e) {
       console.error(e)
       alert('Unable to mint token. Try again later.')

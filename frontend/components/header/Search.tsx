@@ -8,9 +8,9 @@ import { TSearchedNFT } from "@/types"
 
 export default function Search() {
   const [search, setSearch] = useState('')
-  const [page, setPage] = useState(1) // todo
   const [nfts, setNFTs] = useState<TSearchedNFT[]>([])
   const [loading, setLoading] = useState(true)
+  const [hasMore, setHasMore] = useState(false)
 
   const handleSearch = async (e: ChangeEvent<HTMLInputElement>) => {
     try {
@@ -22,9 +22,10 @@ export default function Search() {
 
       setLoading(true)
 
-      const res = await searchNFT(page.toString(), val)
+      const { nfts: n, hasMore } = await searchNFT(val)
 
-      setNFTs(res)
+      setNFTs(n)
+      setHasMore(hasMore)
     } catch(e) {
       console.error(e)
     } finally {
@@ -32,8 +33,17 @@ export default function Search() {
     }
   }
 
+  const ClearSearchBar = () => {
+    setNFTs([])
+    setSearch('')
+  }
+
   const SearchResultCard = ({ imageUrl, name, nameSlug, tokenId }: TSearchedNFT) => {
-  return <Link href={`/token/${nameSlug}`} className='p-2 flex pointer rounded transaition-all hover:bg-gray-200'>
+    return <Link
+      onClick={ClearSearchBar}
+      href={`/token/${nameSlug}`}
+      className='p-2 flex pointer rounded transaition-all hover:bg-gray-200'
+    >
       <img
         alt={name}
         src={imageUrl}
@@ -80,13 +90,28 @@ export default function Search() {
           {
             loading ? <Skeleton />
             : !loading && nfts.length < 1 ? <p className='p-2'>No searchable nfts.</p>
-            : nfts.map(nft => <SearchResultCard
-              key={nft.name}
-              imageUrl={nft.imageUrl}
-              name={nft.name}
-              nameSlug={nft.nameSlug}
-              tokenId={nft.tokenId}
-            />)
+            : <>
+              {
+                nfts.map(nft => <SearchResultCard
+                  key={nft.name}
+                  imageUrl={nft.imageUrl}
+                  name={nft.name}
+                  nameSlug={nft.nameSlug}
+                  tokenId={nft.tokenId}
+                />)
+              }
+
+              {
+                hasMore ? <Link
+                  href={`/search/${search}`}
+                  className='block py-2 text-center pointer w-full transition-all hover:bg-gray-300'
+                  onClick={ClearSearchBar}
+                >
+                  View more...
+                </Link>
+                : null
+              }
+            </>
           }
         </div>
       </> : null

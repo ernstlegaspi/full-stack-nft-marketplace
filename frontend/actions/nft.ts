@@ -71,14 +71,14 @@ export const getAllTokens = async (page: string) => {
     }
   )
 
-  const body = await res.json() as { cached: boolean, nfts: TDisplayedNFT[] }
+  const body = await res.json() as { cached: boolean, hasMore: boolean, nfts: TDisplayedNFT[] }
 
-  return body.nfts
+  return body
 }
 
-export const searchNFT = async (page: string, search: string) => {
+export const searchNFT = async (search: string) => {
   const res = await fetch(
-    `${url}search/${page}/${search}`,
+    `${url}search/${search}`,
     {
       credentials: 'include',
       method: 'GET',
@@ -88,7 +88,25 @@ export const searchNFT = async (page: string, search: string) => {
     }
   )
 
-  const body = await res.json() as { cached: boolean, nfts: TSearchedNFT[] }
+  const body = await res.json() as { cached: boolean, hasMore: boolean, nfts: TSearchedNFT[] }
 
-  return body.nfts
+  return body
+}
+
+export const getNFTsBySearch = async (page: string, search: string) => {
+  const res = await fetch(
+    `${url}search-page/${page}/${search}`,
+    {
+      credentials: 'include',
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  )
+
+  const body = await res.json() as { cached: boolean, hasMore: boolean, nfts: TDisplayedNFT[] }
+  console.log(body)
+
+  return body
 }

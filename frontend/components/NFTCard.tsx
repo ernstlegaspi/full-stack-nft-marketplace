@@ -5,6 +5,8 @@ import { TDisplayedNFT } from '@/types'
 export default function NFTCard({ nft }: { nft: TDisplayedNFT }) {
   const { backgroundColor, description, imageUrl, name, nameSlug } = nft
 
+  const modifiedDescription = description.slice(0, 45)
+
   return <div className='w-max'>
     <Link href={`/token/${nameSlug}`}>
       <div className='text-bb h-[400px] p-3 w-[250px] border border-g bg-white rounded'>
@@ -20,7 +22,7 @@ export default function NFTCard({ nft }: { nft: TDisplayedNFT }) {
 
         <p className='font-medium mt-2'>{name}</p>
 
-        <p>{description}</p>
+        <p>{modifiedDescription}...</p>
       </div>
     </Link>
   </div>

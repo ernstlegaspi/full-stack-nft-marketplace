@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.burnNFT = exports.getAllTokens = exports.searchNFT = exports.getTokenPerName = exports.getAllUserNFT = exports.mintNFT = void 0;
+exports.burnNFT = exports.getAllTokens = exports.getNFTsBySearch = exports.searchNFT = exports.getTokenPerName = exports.getAllUserNFT = exports.mintNFT = void 0;
 const nft_model_1 = __importDefault(require("../models/nft.model"));
 const user_models_1 = __importDefault(require("../models/user.models"));
 const http_code_1 = require("../utils/http_code");
@@ -39,12 +39,10 @@ const mintNFT = (f) => async (req, rep) => {
         const allTokens = await f.redis.smembers(allTokensKeys);
         const allUserTokens = await f.redis.smembers(allUserTokensKeys);
         const pipe = f.redis.pipeline();
-        console.log(allTokens);
-        console.log(allUserTokens);
         if (allTokens.length > 0)
-            pipe.unlink(...allTokens).unlink(allTokensKeys);
+            pipe.del(...allTokens).srem(allTokensKeys, ...allTokens);
         if (allUserTokens.length > 0)
-            pipe.unlink(...allUserTokens).unlink(allUserTokensKeys);
+            pipe.del(...allUserTokens).srem(allUserTokensKeys, ...allUserTokens);
         await pipe.exec();
         return rep.code(201).send({
             ok: true,
@@ -139,37 +137,41 @@ const getTokenPerName = (f) => async (req, rep) => {
 exports.getTokenPerName = getTokenPerName;
 const searchNFT = (f) => async (req, rep) => {
     try {
-        const { page: p, search } = req.params;
-        const page = parseInt(p);
-        const limit = 20;
-        const key = `search:${search}:p:${page}:l:${limit}`;
+        const { search } = req.params;
+        const limit = 3;
+        const key = `search:${search}:l:${limit}`;
         const result = await f.redis.get(key);
         if (result) {
+            const res = JSON.parse(result);
             return rep.code(200).send({
                 cached: true,
-                nfts: JSON.parse(result)
+                hasMore: res.hasMore,
+                nfts: res.nfts
             });
         }
-        const nfts = await nft_model_1.default.find({
+        const q = {
             name: {
                 $regex: search,
                 $options: 'i'
             }
-        })
-            .select('imageUrl name nameSlug tokenId -_id')
-            .limit(limit)
-            .skip((page - 1) * limit)
-            .lean();
-        if (!nfts) {
-            await f.redis.set(key, JSON.stringify([]), 'EX', 300);
-            return rep.code(200).send({
-                cached: false,
-                nfts: []
-            });
-        }
-        await f.redis.set(key, JSON.stringify(nfts), 'EX', 300);
+        };
+        const [doc, total] = await Promise.all([
+            nft_model_1.default.find(q)
+                .select('imageUrl name nameSlug tokenId -_id')
+                .sort({ createdAt: -1 })
+                .limit(limit)
+                .lean(),
+            nft_model_1.default.countDocuments(q)
+        ]);
+        const hasMore = total > limit;
+        const nfts = total < 1 ? [] : doc;
+        await f.redis.set(key, JSON.stringify({
+            hasMore,
+            nfts
+        }), 'EX', 300);
         return rep.code(200).send({
             cached: false,
+            hasMore,
             nfts
         });
     }
@@ -179,27 +181,71 @@ const searchNFT = (f) => async (req, rep) => {
     }
 };
 exports.searchNFT = searchNFT;
+const getNFTsBySearch = (f) => async (req, rep) => {
+    try {
+        const { page: p, search } = req.params;
+        const page = parseInt(p);
+        const limit = 10;
+        const q = {
+            name: {
+                $regex: search,
+                $options: 'i'
+            }
+        };
+        const [docs, total] = await Promise.all([
+            nft_model_1.default.find(q)
+                .select('-_id backgroundColor description imageUrl name nameSlug')
+                .limit(limit)
+                .skip((page - 1) * limit)
+                .sort({ createdAt: -1 })
+                .lean(),
+            nft_model_1.default.countDocuments(q)
+        ]);
+        const hasMore = total > page * limit;
+        const nfts = total < 1 ? [] : docs;
+        return rep.code(200).send({
+            cached: false,
+            hasMore,
+            nfts
+        });
+    }
+    catch (e) {
+        console.error(e);
+        (0, http_code_1._500)(rep);
+    }
+};
+exports.getNFTsBySearch = getNFTsBySearch;
 const getAllTokens = (f) => async (req, rep) => {
     try {
         const { page: p } = req.params;
         const page = parseInt(p);
         if (page === 0)
             return (0, http_code_1._400)(rep, 'invalid page.');
-        const limit = 20;
+        const limit = 9;
         const key = `all:p:${page}:l:${limit}`;
         const result = await f.redis.get(key);
-        // if(result) {
-        //   console.log('test')
-        //   return rep.code(200).send({ cached: true, nfts: JSON.parse(result) })
-        // }
-        const doc = await nft_model_1.default.find()
-            .select('-_id backgroundColor imageUrl name nameSlug description')
-            .sort({ createdAt: -1 })
-            .lean();
+        if (result) {
+            const parsedResult = JSON.parse(result);
+            return rep.code(200).send({ cached: true, hasMore: parsedResult.hasMore, nfts: parsedResult.nfts });
+        }
+        const skip = (page - 1) * limit;
+        const [doc, total] = await Promise.all([
+            nft_model_1.default.find()
+                .select('-_id backgroundColor imageUrl name nameSlug description')
+                .limit(limit)
+                .skip(skip)
+                .sort({ createdAt: -1 })
+                .lean(),
+            nft_model_1.default.estimatedDocumentCount()
+        ]);
+        const hasMore = total > (skip + limit);
         const nfts = doc ?? [];
-        await f.redis.set(key, JSON.stringify(nfts), 'EX', 300);
+        await f.redis.set(key, JSON.stringify({
+            nfts,
+            hasMore
+        }), 'EX', 300);
         await f.redis.sadd(allTokensKeys, key);
-        return rep.code(200).send({ cached: false, nfts });
+        return rep.code(200).send({ cached: false, hasMore, nfts });
     }
     catch (e) {
         console.error(e);
