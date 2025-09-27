@@ -25,6 +25,7 @@ type TMintNFT = {
 
 const allTokensKeys = 'all:tokens'
 const allUserTokensKeys = 'all:user:tokens'
+const searchPageTokensKey = 'search-page:tokens'
 
 export const mintNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body: TMintNFT }>, rep: FastifyReply) => {
   try {
@@ -41,7 +42,7 @@ export const mintNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body
       ownerAddress
     } = req.body
 
-    const { sub: userId } = f.jwt.decode(req.cookies.token!) as { sub: string }
+    const { sub: userId } = decode(f, req) as { sub: string }
     const tokenId = await f.redis.incr(contractAddress)
 
     const nft = await NFT.create({
@@ -73,10 +74,12 @@ export const mintNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body
 
     const allTokens = await f.redis.smembers(allTokensKeys)
     const allUserTokens = await f.redis.smembers(allUserTokensKeys)
+    const allSearchPageTokens = await f.redis.smembers(searchPageTokensKey)
     const pipe = f.redis.pipeline()
 
     if(allTokens.length > 0) pipe.del(...allTokens).srem(allTokensKeys, ...allTokens)
     if(allUserTokens.length > 0) pipe.del(...allUserTokens).srem(allUserTokensKeys, ...allUserTokens)
+    if(allSearchPageTokens) pipe.del(...allSearchPageTokens).srem(searchPageTokensKey, ...allSearchPageTokens)
 
     await pipe.exec()
 
@@ -96,39 +99,44 @@ export const getAllUserNFT = (f: FastifyInstance) => async (req: FastifyRequest<
     const page = parseInt(p)
 
     const { address } = decode(f, req) as { address: string }
-    const limit = 20
+    const limit = 10
     const key = `all:${address}:p:${page}:l:${limit}`
 
     const result = await f.redis.get(key)
 
     if(result) {
+      const res = JSON.parse(result)
+
       return rep.code(200).send({
         cached: true,
-        nfts: JSON.parse(result)
+        hasMore: res.hasMore,
+        nfts: res.nfts
       })
     }
 
-    const nfts = await User.findOne({ address })
-    .select('mintedNFTs -_id')
-    .populate({
-      path: 'mintedNFTs',
-      select: '-ownerAddress -ownerId -contractAddress -__v',
-      options: {
-        limit,
-        skip: (page - 1) * limit,
-        sort: { createdAt: -1 }
-      },
-      populate: {
-        path: 'creator',
-        select: '-_id address'
-      }
-    })
-    .lean()
-    const mintedNFTs = nfts?.mintedNFTs ?? []
+    const q = {
+      ownerAddress: address
+    }
+
+    const [docs, total] = await Promise.all([
+      NFT.find(q)
+      .select('-_id backgroundColor description imageUrl name nameSlug tokenId')
+      .limit(limit)
+      .skip((page - 1) * limit)
+      .sort({ createdAt: -1 })
+      .lean(),
+      NFT.countDocuments(q)
+    ])
+
+    const hasMore = total > page * limit
+    const nfts = total < 1 ? [] : docs
 
     await f.redis.set(
       key,
-      JSON.stringify(mintedNFTs),
+      JSON.stringify({
+        hasMore,
+        nfts
+      }),
       'EX',
       300
     )
@@ -137,7 +145,8 @@ export const getAllUserNFT = (f: FastifyInstance) => async (req: FastifyRequest<
 
     return rep.code(200).send({
       cached: false,
-      nfts: mintedNFTs
+      hasMore,
+      nfts
     })
   } catch(e) {
     console.error(e)
@@ -253,6 +262,20 @@ export const getNFTsBySearch = (f: FastifyInstance) => async (req: FastifyReques
     const { page: p, search } = req.params
     const page = parseInt(p)
 
+    const key = `search-page:p:${page}:s:${search}`
+
+    const result = await f.redis.get(key)
+
+    if(result) {
+      const res = JSON.parse(result)
+
+      return rep.code(200).send({
+        cached: true,
+        hasMore: res.hasMore,
+        nfts: res.nfts
+      })
+    }
+
     const limit = 10
     const q = {
       name: {
@@ -273,6 +296,19 @@ export const getNFTsBySearch = (f: FastifyInstance) => async (req: FastifyReques
 
     const hasMore = total > page * limit
     const nfts = total < 1 ? [] : docs
+
+
+    await f.redis.set(
+      key,
+      JSON.stringify({
+        hasMore,
+        nfts
+      }),
+      'EX',
+      300
+    )
+
+    await f.redis.sadd(searchPageTokensKey, key)
 
     return rep.code(200).send({
       cached: false,

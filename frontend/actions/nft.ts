@@ -25,7 +25,7 @@ export const mintNFT = async (data: TInput): Promise<TNFTResponse> => {
   return body
 }
 
-export const getAllUserNFTs = async (page: number) => {
+export const getAllUserNFTs = async (page: string) => {
   const res = await fetch(
     `${url}all/user/${page}`,
     {
@@ -37,9 +37,10 @@ export const getAllUserNFTs = async (page: number) => {
     }
   )
 
-  const body = await res.json() as { cached: boolean, nfts: TDisplayedNFT[] }
+  const body = await res.json() as { cached: boolean, hasMore: boolean, nfts: TDisplayedNFT[] }
+  console.log(body)
 
-  return body.nfts
+  return body
 }
 
 export const getTokenPerName = async (name: string) => {

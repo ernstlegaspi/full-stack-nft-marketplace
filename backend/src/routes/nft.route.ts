@@ -124,42 +124,30 @@ export default function nft(f: FastifyInstance) {
         200: {
           type: 'object',
           additionalProperties: false,
-          required: ['cached', 'nfts'],
+          required: ['cached', 'hasMore', 'nfts'],
           properties: {
             cached: { type: 'boolean' },
+            hasMore: { type: 'boolean' },
             nfts: {
               type: 'array',
               items: {
                 type: 'object',
                 additionalProperties: false,
                 required: [
-                  'attributes',
                   'backgroundColor',
-                  'collection',
-                  'creator',
                   'description',
                   'imageUrl',
-                  'metadataUrl',
                   'name',
+                  'nameSlug',
                   'tokenId'
                 ],
                 properties: {
-                  attributes: nftAttributesField,
                   backgroundColor: { type: 'string' },
-                  collection: { type: 'string' },
-                  creator: {
-                    type: 'object',
-                    additionalProperties: false,
-                    required: ['address'],
-                    properties: {
-                      address: { type: 'string' }
-                    }
-                  },
                   description: { type: 'string' },
                   imageUrl: { type: 'string' },
-                  metadataUrl: { type: 'string' },
                   name: { type: 'string' },
-                  tokenId: { type: 'number' },
+                  nameSlug: { type: 'string' },
+                  tokenId: { type: 'number' }
                 }
               }
             }

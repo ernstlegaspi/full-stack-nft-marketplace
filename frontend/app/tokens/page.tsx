@@ -8,7 +8,7 @@ export default async function TokensPage() {
 
   if(!isAuthenticated) redirect('/')
 
-  return <div className='pt80'>
+  return <div className='py-[80px]'>
     <Tokens />
   </div>
 }
