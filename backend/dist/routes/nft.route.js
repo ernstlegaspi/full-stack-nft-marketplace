@@ -11,8 +11,7 @@ const nftRequiredFields = [
     'imageUrl',
     'metadataUrl',
     'name',
-    'nameSlug',
-    'ownerAddress'
+    'nameSlug'
 ];
 const nftAttributesField = {
     type: 'array',
@@ -55,13 +54,7 @@ function nft(f) {
                     imageUrl: { type: 'string', format: 'uri' },
                     metadataUrl: { type: 'string' },
                     name: { type: 'string', minLength: 2 },
-                    nameSlug: { type: 'string', minLength: 2 },
-                    ownerAddress: {
-                        type: 'string',
-                        pattern: '^0x[a-fA-F0-9]{40}$',
-                        minLength: 42,
-                        maxLength: 42
-                    }
+                    nameSlug: { type: 'string', minLength: 2 }
                 }
             },
             response: {
@@ -79,6 +72,7 @@ function nft(f) {
                                 'creator',
                                 'ownerId',
                                 'tokenId',
+                                'ownerAddress',
                                 ...nftRequiredFields
                             ],
                             properties: {
@@ -132,20 +126,20 @@ function nft(f) {
                                 type: 'object',
                                 additionalProperties: false,
                                 required: [
+                                    '_id',
                                     'backgroundColor',
                                     'description',
                                     'imageUrl',
                                     'name',
-                                    'nameSlug',
-                                    'tokenId'
+                                    'nameSlug'
                                 ],
                                 properties: {
+                                    _id: { type: 'string' },
                                     backgroundColor: { type: 'string' },
                                     description: { type: 'string' },
                                     imageUrl: { type: 'string' },
                                     name: { type: 'string' },
-                                    nameSlug: { type: 'string' },
-                                    tokenId: { type: 'number' }
+                                    nameSlug: { type: 'string' }
                                 }
                             }
                         }
@@ -180,6 +174,7 @@ function nft(f) {
                             type: 'object',
                             additionalProperties: false,
                             required: [
+                                '_id',
                                 'attributes',
                                 'backgroundColor',
                                 'collection',
@@ -195,6 +190,7 @@ function nft(f) {
                                 'tokenId'
                             ],
                             properties: {
+                                _id: { type: 'string' },
                                 attributes: nftAttributesField,
                                 backgroundColor: { type: 'string' },
                                 collection: { type: 'string' },
@@ -297,13 +293,26 @@ function nft(f) {
                             items: {
                                 type: 'object',
                                 additionalProperties: false,
-                                required: ['backgroundColor', 'imageUrl', 'name', 'nameSlug', 'description'],
+                                required: ['_id',
+                                    'backgroundColor',
+                                    'description',
+                                    'imageUrl',
+                                    'metadataUrl',
+                                    'name',
+                                    'nameSlug',
+                                    'ownerAddress',
+                                    'tokenId'
+                                ],
                                 properties: {
+                                    _id: { type: 'string' },
                                     backgroundColor: { type: 'string' },
+                                    description: { type: 'string' },
                                     imageUrl: { type: 'string' },
+                                    metadataUrl: { type: 'string' },
                                     name: { type: 'string' },
                                     nameSlug: { type: 'string' },
-                                    description: { type: 'string' }
+                                    ownerAddress: { type: 'string' },
+                                    tokenId: { type: 'number' }
                                 }
                             }
                         }
@@ -340,9 +349,10 @@ function nft(f) {
                             type: 'array',
                             items: {
                                 additionalProperties: false,
-                                required: ['backgroundColor', 'description', 'imageUrl', 'name', 'nameSlug'],
+                                required: ['_id', 'backgroundColor', 'description', 'imageUrl', 'name', 'nameSlug'],
                                 type: 'object',
                                 properties: {
+                                    _id: { type: 'string' },
                                     backgroundColor: { type: 'string' },
                                     description: { type: 'string' },
                                     imageUrl: { type: 'string' },
@@ -357,5 +367,42 @@ function nft(f) {
             }
         },
         handler: (0, nft_controller_1.getNFTsBySearch)(f)
+    });
+    f.route({
+        method: 'DELETE',
+        url: '',
+        schema: {
+            body: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['_id'],
+                properties: {
+                    _id: { type: 'string' }
+                }
+            },
+            response: {
+                200: {
+                    type: 'object',
+                    additionalProperties: false,
+                    required: ['ok', 'data'],
+                    properties: {
+                        ok: { type: 'boolean' },
+                        data: {
+                            additionalProperties: false,
+                            type: 'object',
+                            required: ['message', 'token'],
+                            properties: {
+                                message: { type: 'string' },
+                                token: { type: 'string' }
+                            }
+                        }
+                    }
+                },
+                400: { $ref: 'ErrorResponse#' },
+                500: { $ref: 'ErrorResponse#' }
+            }
+        },
+        preHandler: [f.authenticate],
+        handler: (0, nft_controller_1.burnNFT)(f)
     });
 }

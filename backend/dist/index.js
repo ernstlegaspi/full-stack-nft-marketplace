@@ -29,7 +29,9 @@ const user_route_1 = __importDefault(require("./routes/user.route"));
     app.register(multipart_1.default);
     app.register(cors_1.default, {
         credentials: true,
-        origin: 'http://localhost:3000'
+        origin: 'http://localhost:3000',
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization']
     });
     app.register(cookie_1.default, {
         secret: process.env.COOKIE_SECRET,

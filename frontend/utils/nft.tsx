@@ -13,13 +13,14 @@ let _provider: ethers.BrowserProvider | null = null
 let _connecting = false
 
 let _contract: ethers.Contract | null = null
+let _address = ''
 
-export const createContract = async () => {
+export const createContract = async (): Promise<string> => {
   if(typeof window === "undefined" || !isEip1193(window.ethereum)) {
     throw new Error("No EIP-1193 provider found.")
   }
 
-  if(_contract) return
+  if(_contract) return _address
 
   if(_connecting) {
     await new Promise((res) => {
@@ -31,7 +32,7 @@ export const createContract = async () => {
       }, 50)
     })
 
-    return
+    return _address
   }
 
   try {
@@ -52,6 +53,7 @@ export const createContract = async () => {
     const signer = await _provider.getSigner()
     _contract = new ethers.Contract(contractAddress, contractABI, signer)
     const address = await signer.getAddress()
+    _address = address
     const network = await _provider.getNetwork()
     const chainId = Number(network.chainId)
 
@@ -93,6 +95,8 @@ export const createContract = async () => {
         body: JSON.stringify({ address, accountBalance: balanceWei.toString() })
       }
     )
+
+    return address
   } finally {
     _connecting = false
   }

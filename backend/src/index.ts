@@ -30,7 +30,9 @@ import userRoutes from './routes/user.route'
 
   app.register(cors, {
     credentials: true,
-    origin: 'http://localhost:3000'
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
   })
 
   app.register(cookie, {

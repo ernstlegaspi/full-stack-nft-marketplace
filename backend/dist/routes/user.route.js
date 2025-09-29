@@ -100,4 +100,22 @@ async function user(f) {
         preHandler: [f.authenticate],
         handler: (0, user_controller_1.authenticateUser)(f)
     });
+    f.route({
+        method: 'GET',
+        url: 'user-address',
+        schema: {
+            response: {
+                200: {
+                    type: 'object',
+                    required: ['address'],
+                    additionalProperties: false,
+                    properties: {
+                        address: { type: 'string' }
+                    }
+                }
+            }
+        },
+        preHandler: [f.authenticate],
+        handler: (0, user_controller_1.getUserAddress)(f)
+    });
 }

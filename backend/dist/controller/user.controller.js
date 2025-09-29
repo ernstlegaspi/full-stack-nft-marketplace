@@ -3,12 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.authenticateUser = exports.handleUser = exports.authVerifySignature = exports.authNonce = void 0;
+exports.getUserAddress = exports.authenticateUser = exports.handleUser = exports.authVerifySignature = exports.authNonce = void 0;
 const crypto_1 = require("crypto");
 const siwe_1 = require("siwe");
 const user_models_1 = __importDefault(require("../models/user.models"));
 const refresh_token_model_1 = __importDefault(require("../models/refresh_token.model"));
 const http_code_1 = require("../utils/http_code");
+const utils_1 = require("../utils");
 const tokenTime = '30m'; // 30 mins default, can change to lower timeframe for dev testing
 const expiresIn7Days = () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 const setCookie = (rep, refreshToken) => rep.setCookie('refresh_token', refreshToken, {
@@ -102,4 +103,15 @@ const authenticateUser = (f) => async (req, rep) => {
     }
 };
 exports.authenticateUser = authenticateUser;
+const getUserAddress = (f) => async (req, rep) => {
+    try {
+        const { address } = (0, utils_1.decode)(f, req);
+        return rep.code(200).send({ address });
+    }
+    catch (e) {
+        console.error(e);
+        (0, http_code_1._500)(rep);
+    }
+};
+exports.getUserAddress = getUserAddress;
 // implement refresh token controller

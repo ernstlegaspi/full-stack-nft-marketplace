@@ -13,7 +13,6 @@ type TNFT = {
   _id: string
   creator: string
   imageUrl: string
-  ownerAddress: string
   ownerId: string
   tokenId: number
 } & TNFTInput
@@ -49,9 +48,13 @@ export type TSearchedNFT = {
 }
 
 export type TDisplayedNFT = {
+  _id: string
   backgroundColor: string
   description: string
   imageUrl: string
+  metadataUrl: string
   name: string
   nameSlug: string
+  ownerAddress: string
+  tokenId: number
 }

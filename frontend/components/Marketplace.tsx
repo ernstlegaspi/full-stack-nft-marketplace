@@ -7,13 +7,20 @@ import Skeleton from "./SkeletonNFTCard"
 import Loader from "./Loader"
 import { TDisplayedNFT } from "@/types"
 import { getAllTokens } from "@/actions/nft"
+import { userUserAddress } from "@/states/userAddress"
+import { getUserAddress } from "@/actions/user"
+import { ethers } from "ethers"
+import { createContractOnPageRefresh } from "@/utils/nft"
 
 export default function Marketplace() {
+  const { userAddress, setUserAddress } = userUserAddress()
+
   const [nfts, setNFTs] = useState<TDisplayedNFT[]>([])
   const [pageLoads, setPageLoads] = useState(true)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(false)
+  const [contract, setContract] = useState<ethers.Contract | null>(null)
 
   useEffect(() => {
     (async () => {
@@ -22,6 +29,13 @@ export default function Marketplace() {
 
         setNFTs(res.nfts)
         setHasMore(res.hasMore)
+
+        if(userAddress) return
+
+        const { address, contract } = await createContractOnPageRefresh()
+        setUserAddress(address)
+        setContract(contract)
+        console.log(contract)
       } catch(e) {
         console.error(e)
       } finally {
@@ -56,8 +70,10 @@ export default function Marketplace() {
     <div className='grid gap-6 grid-repeat place-items-center max-[560px]:flex max-[560px]:flex-col max-[560px]:justify-center'>
       {
         nfts.map(token => <NFTCard
+          contract={contract!}
           key={token.name}
           nft={token}
+          userAddress={userAddress}
         />)
       }
     </div>

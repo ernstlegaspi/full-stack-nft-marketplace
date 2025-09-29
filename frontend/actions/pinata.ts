@@ -94,3 +94,20 @@ export const uploadMetadataToPinata = async (data: TMetadata): Promise<string> =
 
   return IpfsHash
 }
+
+export const deleteFileOnPinata = async (imageUrl: string, metadataUrl: string) => {
+  await Promise.all([
+    fetch(`https://api.pinata.cloud/pinning/unpin/${imageUrl}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${process.env.PINATA_JWT!}`
+      }
+    }),
+    fetch(`https://api.pinata.cloud/pinning/unpin/${metadataUrl}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${process.env.PINATA_JWT!}`
+      }
+    })
+  ])
+}

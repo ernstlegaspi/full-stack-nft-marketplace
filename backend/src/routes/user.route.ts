@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { authNonce, authVerifySignature, authenticateUser, handleUser } from '../controller/user.controller'
+import { authNonce, authVerifySignature, authenticateUser, getUserAddress, handleUser } from '../controller/user.controller'
 
 export default async function user(f: FastifyInstance) {
   f.route({
@@ -101,5 +101,24 @@ export default async function user(f: FastifyInstance) {
     },
     preHandler: [f.authenticate],
     handler: authenticateUser(f)
+  })
+
+  f.route({
+    method: 'GET',
+    url: 'user-address',
+    schema: {
+      response: {
+        200: {
+          type: 'object',
+          required: ['address'],
+          additionalProperties: false,
+          properties: {
+            address: { type: 'string' }
+          }
+        }
+      }
+    },
+    preHandler: [f.authenticate],
+    handler: getUserAddress(f)
   })
 }

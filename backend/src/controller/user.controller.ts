@@ -6,6 +6,7 @@ import { SiweMessage, generateNonce } from 'siwe'
 import User from '../models/user.models'
 import RefreshToken from '../models/refresh_token.model'
 import { _400, _401, _500 } from '../utils/http_code'
+import { decode } from '../utils'
 
 type TUser = {
   address: string
@@ -132,6 +133,17 @@ export const handleUser = (f: FastifyInstance) => async (req: FastifyRequest<{ B
 export const authenticateUser = (f: FastifyInstance) => async (req: FastifyRequest, rep: FastifyReply) => {
   try {
     return rep.code(200).send({ authenticated: true })
+  } catch(e) {
+    console.error(e)
+    _500(rep)
+  }
+}
+
+export const getUserAddress = (f: FastifyInstance) => async (req: FastifyRequest, rep: FastifyReply) => {
+  try {
+    const { address } = decode(f, req) as { address: string }
+
+    return rep.code(200).send({ address })
   } catch(e) {
     console.error(e)
     _500(rep)

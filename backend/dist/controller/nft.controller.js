@@ -11,10 +11,23 @@ const utils_1 = require("../utils");
 const allTokensKeys = 'all:tokens';
 const allUserTokensKeys = 'all:user:tokens';
 const searchPageTokensKey = 'search-page:tokens';
+const deleteFetchCache = async (f) => {
+    const allTokens = await f.redis.smembers(allTokensKeys);
+    const allUserTokens = await f.redis.smembers(allUserTokensKeys);
+    const allSearchPageTokens = await f.redis.smembers(searchPageTokensKey);
+    const pipe = f.redis.pipeline();
+    if (allTokens.length > 0)
+        pipe.del(...allTokens).srem(allTokensKeys, ...allTokens);
+    if (allUserTokens.length > 0)
+        pipe.del(...allUserTokens).srem(allUserTokensKeys, ...allUserTokens);
+    if (allSearchPageTokens)
+        pipe.del(...allSearchPageTokens).srem(searchPageTokensKey, ...allSearchPageTokens);
+    await pipe.exec();
+};
 const mintNFT = (f) => async (req, rep) => {
     try {
-        const { attributes, backgroundColor, collection, contractAddress, description, imageUrl, metadataUrl, name, nameSlug, ownerAddress } = req.body;
-        const { sub: userId } = (0, utils_1.decode)(f, req);
+        const { attributes, backgroundColor, collection, contractAddress, description, imageUrl, metadataUrl, name, nameSlug } = req.body;
+        const { address, sub: userId } = (0, utils_1.decode)(f, req);
         const tokenId = await f.redis.incr(contractAddress);
         const nft = await nft_model_1.default.create({
             attributes,
@@ -27,7 +40,7 @@ const mintNFT = (f) => async (req, rep) => {
             metadataUrl,
             name,
             nameSlug,
-            ownerAddress,
+            ownerAddress: address,
             ownerId: userId,
             tokenId
         });
@@ -37,17 +50,7 @@ const mintNFT = (f) => async (req, rep) => {
             }
         });
         const { createdAt, updatedAt, ...rest } = nft.toObject();
-        const allTokens = await f.redis.smembers(allTokensKeys);
-        const allUserTokens = await f.redis.smembers(allUserTokensKeys);
-        const allSearchPageTokens = await f.redis.smembers(searchPageTokensKey);
-        const pipe = f.redis.pipeline();
-        if (allTokens.length > 0)
-            pipe.del(...allTokens).srem(allTokensKeys, ...allTokens);
-        if (allUserTokens.length > 0)
-            pipe.del(...allUserTokens).srem(allUserTokensKeys, ...allUserTokens);
-        if (allSearchPageTokens)
-            pipe.del(...allSearchPageTokens).srem(searchPageTokensKey, ...allSearchPageTokens);
-        await pipe.exec();
+        await deleteFetchCache(f);
         return rep.code(201).send({
             ok: true,
             nft: { ...rest }
@@ -80,7 +83,7 @@ const getAllUserNFT = (f) => async (req, rep) => {
         };
         const [docs, total] = await Promise.all([
             nft_model_1.default.find(q)
-                .select('-_id backgroundColor description imageUrl name nameSlug tokenId')
+                .select('_id backgroundColor description imageUrl name nameSlug')
                 .limit(limit)
                 .skip((page - 1) * limit)
                 .sort({ createdAt: -1 })
@@ -118,7 +121,7 @@ const getTokenPerName = (f) => async (req, rep) => {
             });
         }
         const nft = await nft_model_1.default.findOne({ nameSlug: tokenName })
-            .select('-ownerAddress -__v -_id -updatedAt')
+            .select('-ownerAddress -__v -updatedAt')
             .populate({
             path: 'creator',
             select: '-_id address'
@@ -211,7 +214,7 @@ const getNFTsBySearch = (f) => async (req, rep) => {
         };
         const [docs, total] = await Promise.all([
             nft_model_1.default.find(q)
-                .select('-_id backgroundColor description imageUrl name nameSlug')
+                .select('_id backgroundColor description imageUrl name nameSlug')
                 .limit(limit)
                 .skip((page - 1) * limit)
                 .sort({ createdAt: -1 })
@@ -246,14 +249,14 @@ const getAllTokens = (f) => async (req, rep) => {
         const limit = 9;
         const key = `all:p:${page}:l:${limit}`;
         const result = await f.redis.get(key);
-        if (result) {
-            const parsedResult = JSON.parse(result);
-            return rep.code(200).send({ cached: true, hasMore: parsedResult.hasMore, nfts: parsedResult.nfts });
-        }
+        // if(result) {
+        //   const parsedResult = JSON.parse(result)
+        //   return rep.code(200).send({ cached: true, hasMore: parsedResult.hasMore, nfts: parsedResult.nfts })
+        // }
         const skip = (page - 1) * limit;
         const [doc, total] = await Promise.all([
             nft_model_1.default.find()
-                .select('-_id backgroundColor imageUrl name nameSlug description')
+                .select('_id backgroundColor description imageUrl metadataUrl name nameSlug ownerAddress tokenId')
                 .limit(limit)
                 .skip(skip)
                 .sort({ createdAt: -1 })
@@ -277,6 +280,24 @@ const getAllTokens = (f) => async (req, rep) => {
 exports.getAllTokens = getAllTokens;
 const burnNFT = (f) => async (req, rep) => {
     try {
+        // _id = token object id
+        const { _id } = req.body;
+        const deletedNFT = await nft_model_1.default.findOneAndDelete({ _id });
+        const { sub: userId } = (0, utils_1.decode)(f, req);
+        if (!deletedNFT)
+            return (0, http_code_1._400)(rep, 'NFT Token not existing.');
+        await user_models_1.default.findOneAndUpdate({
+            _id: userId
+        }, {
+            $addToSet: {
+                burnedNFTs: _id
+            }
+        });
+        await deleteFetchCache(f);
+        return rep.code(200).send({ ok: true, data: {
+                message: 'Token Delete',
+                token: deletedNFT
+            } });
     }
     catch (e) {
         console.error(e);

@@ -20,12 +20,24 @@ type TMintNFT = {
   metadataUrl: string
   name: string
   nameSlug: string
-  ownerAddress: string
 }
 
 const allTokensKeys = 'all:tokens'
 const allUserTokensKeys = 'all:user:tokens'
 const searchPageTokensKey = 'search-page:tokens'
+
+const deleteFetchCache = async (f: FastifyInstance) => {
+  const allTokens = await f.redis.smembers(allTokensKeys)
+  const allUserTokens = await f.redis.smembers(allUserTokensKeys)
+  const allSearchPageTokens = await f.redis.smembers(searchPageTokensKey)
+  const pipe = f.redis.pipeline()
+
+  if(allTokens.length > 0) pipe.del(...allTokens).srem(allTokensKeys, ...allTokens)
+  if(allUserTokens.length > 0) pipe.del(...allUserTokens).srem(allUserTokensKeys, ...allUserTokens)
+  if(allSearchPageTokens) pipe.del(...allSearchPageTokens).srem(searchPageTokensKey, ...allSearchPageTokens)
+
+  await pipe.exec()
+}
 
 export const mintNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body: TMintNFT }>, rep: FastifyReply) => {
   try {
@@ -38,11 +50,10 @@ export const mintNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body
       imageUrl,
       metadataUrl,
       name,
-      nameSlug,
-      ownerAddress
+      nameSlug
     } = req.body
 
-    const { sub: userId } = decode(f, req) as { sub: string }
+    const { address, sub: userId } = decode(f, req) as { address: string, sub: string }
     const tokenId = await f.redis.incr(contractAddress)
 
     const nft = await NFT.create({
@@ -56,7 +67,7 @@ export const mintNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body
       metadataUrl,
       name,
       nameSlug,
-      ownerAddress,
+      ownerAddress: address,
       ownerId: userId,
       tokenId
     })
@@ -72,16 +83,7 @@ export const mintNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body
 
     const { createdAt, updatedAt, ...rest } = nft.toObject()
 
-    const allTokens = await f.redis.smembers(allTokensKeys)
-    const allUserTokens = await f.redis.smembers(allUserTokensKeys)
-    const allSearchPageTokens = await f.redis.smembers(searchPageTokensKey)
-    const pipe = f.redis.pipeline()
-
-    if(allTokens.length > 0) pipe.del(...allTokens).srem(allTokensKeys, ...allTokens)
-    if(allUserTokens.length > 0) pipe.del(...allUserTokens).srem(allUserTokensKeys, ...allUserTokens)
-    if(allSearchPageTokens) pipe.del(...allSearchPageTokens).srem(searchPageTokensKey, ...allSearchPageTokens)
-
-    await pipe.exec()
+    await deleteFetchCache(f)
 
     return rep.code(201).send({
       ok: true,
@@ -120,7 +122,7 @@ export const getAllUserNFT = (f: FastifyInstance) => async (req: FastifyRequest<
 
     const [docs, total] = await Promise.all([
       NFT.find(q)
-      .select('-_id backgroundColor description imageUrl name nameSlug tokenId')
+      .select('_id backgroundColor description imageUrl name nameSlug')
       .limit(limit)
       .skip((page - 1) * limit)
       .sort({ createdAt: -1 })
@@ -169,7 +171,7 @@ export const getTokenPerName = (f: FastifyInstance) => async (req: FastifyReques
     }
 
     const nft = await NFT.findOne({ nameSlug: tokenName })
-    .select('-ownerAddress -__v -_id -updatedAt')
+    .select('-ownerAddress -__v -updatedAt')
     .populate({
       path: 'creator',
       select: '-_id address'
@@ -286,7 +288,7 @@ export const getNFTsBySearch = (f: FastifyInstance) => async (req: FastifyReques
 
     const [docs, total] = await Promise.all([
       NFT.find(q)
-      .select('-_id backgroundColor description imageUrl name nameSlug')
+      .select('_id backgroundColor description imageUrl name nameSlug')
       .limit(limit)
       .skip((page - 1) * limit)
       .sort({ createdAt: -1 })
@@ -296,7 +298,6 @@ export const getNFTsBySearch = (f: FastifyInstance) => async (req: FastifyReques
 
     const hasMore = total > page * limit
     const nfts = total < 1 ? [] : docs
-
 
     await f.redis.set(
       key,
@@ -333,17 +334,17 @@ export const getAllTokens = (f: FastifyInstance) => async (req: FastifyRequest<{
 
     const result = await f.redis.get(key)
 
-    if(result) {
-      const parsedResult = JSON.parse(result)
+    // if(result) {
+    //   const parsedResult = JSON.parse(result)
 
-      return rep.code(200).send({ cached: true, hasMore: parsedResult.hasMore, nfts: parsedResult.nfts })
-    }
+    //   return rep.code(200).send({ cached: true, hasMore: parsedResult.hasMore, nfts: parsedResult.nfts })
+    // }
 
     const skip = (page - 1) * limit
 
     const [doc, total] = await Promise.all([
       NFT.find()
-      .select('-_id backgroundColor imageUrl name nameSlug description')
+      .select('_id backgroundColor description imageUrl metadataUrl name nameSlug ownerAddress tokenId')
       .limit(limit)
       .skip(skip)
       .sort({ createdAt: -1 })
@@ -373,9 +374,33 @@ export const getAllTokens = (f: FastifyInstance) => async (req: FastifyRequest<{
   }
 }
 
-export const burnNFT = (f: FastifyInstance) => async (req: FastifyRequest, rep: FastifyReply) => {
+export const burnNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body: { _id: string } }>, rep: FastifyReply) => {
   try {
-    
+    // _id = token object id
+    const { _id } = req.body
+
+    const deletedNFT = await NFT.findOneAndDelete({ _id })
+    const { sub: userId } = decode(f, req) as { sub: string }
+
+    if(!deletedNFT) return _400(rep, 'NFT Token not existing.')
+
+    await User.findOneAndUpdate(
+      {
+        _id: userId
+      },
+      {
+        $addToSet: {
+          burnedNFTs: _id
+        }
+      }
+    )
+
+    await deleteFetchCache(f)
+
+    return rep.code(200).send({ ok: true, data: {
+      message: 'Token Delete',
+      token: deletedNFT
+    } })
   } catch(e) {
     console.error(e)
     _500(rep)

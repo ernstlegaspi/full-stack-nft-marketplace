@@ -4,8 +4,11 @@ const url = `${process.env.NEXT_PUBLIC_API_URL!}nft/`
 
 type TInput = {
   imageUrl: string
-  ownerAddress: string
 } & TNFTInput
+
+type TUserTokens = {
+  tokenId: number
+} & TDisplayedNFT
 
 export const mintNFT = async (data: TInput): Promise<TNFTResponse> => {
   const res = await fetch(
@@ -37,8 +40,7 @@ export const getAllUserNFTs = async (page: string) => {
     }
   )
 
-  const body = await res.json() as { cached: boolean, hasMore: boolean, nfts: TDisplayedNFT[] }
-  console.log(body)
+  const body = await res.json() as { cached: boolean, hasMore: boolean, nfts: TUserTokens[] }
 
   return body
 }
@@ -107,6 +109,25 @@ export const getNFTsBySearch = async (page: string, search: string) => {
   )
 
   const body = await res.json() as { cached: boolean, hasMore: boolean, nfts: TDisplayedNFT[] }
+  console.log(body)
+
+  return body
+}
+
+export const burnNFT = async (_id: string) => {
+  const res = await fetch(
+    `${url}`,
+    {
+      credentials: 'include',
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ _id })
+    }
+  )
+
+  const body = await res.json() as { ok: boolean, data: { message: string, token: string } }
   console.log(body)
 
   return body

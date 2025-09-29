@@ -14,7 +14,6 @@ import { uploadImageToPinata, uploadMetadataToPinata } from '@/actions/pinata'
 import { createContractOnPageRefresh } from '@/utils/nft'
 import { ethers } from 'ethers'
 import { zMintNFT } from '@/zod'
-import { useRouter } from 'next/navigation'
 
 type TState = {
   isAddingAttributes: boolean
@@ -27,7 +26,6 @@ type TState = {
 } & Omit<TNFTInput, 'metadataUrl'>
 
 export default function MintModal() {
-  const router = useRouter()
   const { isShown, setIsShown } = showMintModal()
 
   const [_contract, setContract] = useState<ethers.Contract>()
@@ -125,7 +123,6 @@ export default function MintModal() {
 
       const { nft } = await mintNFT({
         imageUrl: `https://ipfs.io/ipfs/${imageUrl}`,
-        ownerAddress: _address,
         attributes: state.attributes,
         backgroundColor: state.backgroundColor,
         collection: state.collection,

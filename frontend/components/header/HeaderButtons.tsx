@@ -7,10 +7,12 @@ import { IoMenu } from "react-icons/io5"
 import { showMintModal } from "@/states/showMintModal"
 import { createContract } from "@/utils/nft"
 import { useRouter } from 'next/navigation'
+import { userUserAddress } from '@/states/userAddress'
 
 export default function HeaderButtons({ isAuthenticated }: { isAuthenticated: boolean }) {
   const router = useRouter()
   const { setIsShown } = showMintModal()
+  const { setUserAddress } = userUserAddress()
 
   const [loading, setLoading] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
@@ -19,7 +21,10 @@ export default function HeaderButtons({ isAuthenticated }: { isAuthenticated: bo
     try {
       setLoading(true)
 
-      await createContract()
+      const address = await createContract()
+
+      setUserAddress(address)
+
       router.refresh()
     } catch(e) {
       console.error(e)

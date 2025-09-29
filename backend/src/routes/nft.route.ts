@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { getAllTokens, getAllUserNFT, getNFTsBySearch, getTokenPerName, mintNFT, searchNFT } from '../controller/nft.controller'
+import { burnNFT, getAllTokens, getAllUserNFT, getNFTsBySearch, getTokenPerName, mintNFT, searchNFT } from '../controller/nft.controller'
 
 const nftRequiredFields = [
   'attributes',
@@ -10,8 +10,7 @@ const nftRequiredFields = [
   'imageUrl',
   'metadataUrl',
   'name',
-  'nameSlug',
-  'ownerAddress'
+  'nameSlug'
 ] as const
 
 const nftAttributesField = {
@@ -56,13 +55,7 @@ export default function nft(f: FastifyInstance) {
           imageUrl: { type: 'string', format: 'uri' },
           metadataUrl: { type: 'string' },
           name: { type: 'string', minLength: 2 },
-          nameSlug: { type: 'string', minLength: 2 },
-          ownerAddress: {
-            type: 'string',
-            pattern: '^0x[a-fA-F0-9]{40}$',
-            minLength: 42,
-            maxLength: 42
-          }
+          nameSlug: { type: 'string', minLength: 2 }
         }
       },
       response: {
@@ -80,6 +73,7 @@ export default function nft(f: FastifyInstance) {
                 'creator',
                 'ownerId',
                 'tokenId',
+                'ownerAddress',
                 ...nftRequiredFields
               ],
               properties: {
@@ -134,20 +128,20 @@ export default function nft(f: FastifyInstance) {
                 type: 'object',
                 additionalProperties: false,
                 required: [
+                  '_id',
                   'backgroundColor',
                   'description',
                   'imageUrl',
                   'name',
-                  'nameSlug',
-                  'tokenId'
+                  'nameSlug'
                 ],
                 properties: {
+                  _id: { type: 'string' },
                   backgroundColor: { type: 'string' },
                   description: { type: 'string' },
                   imageUrl: { type: 'string' },
                   name: { type: 'string' },
-                  nameSlug: { type: 'string' },
-                  tokenId: { type: 'number' }
+                  nameSlug: { type: 'string' }
                 }
               }
             }
@@ -183,6 +177,7 @@ export default function nft(f: FastifyInstance) {
               type: 'object',
               additionalProperties: false,
               required: [
+                '_id',
                 'attributes',
                 'backgroundColor',
                 'collection',
@@ -198,6 +193,7 @@ export default function nft(f: FastifyInstance) {
                 'tokenId'
               ],
               properties: {
+                _id: { type: 'string' },
                 attributes: nftAttributesField,
                 backgroundColor: { type: 'string' },
                 collection: { type: 'string' },
@@ -302,13 +298,26 @@ export default function nft(f: FastifyInstance) {
               items: {
                 type: 'object',
                 additionalProperties: false,
-                required: ['backgroundColor', 'imageUrl', 'name', 'nameSlug', 'description'],
+                required: ['_id',
+                  'backgroundColor',
+                  'description',
+                  'imageUrl',
+                  'metadataUrl',
+                  'name',
+                  'nameSlug',
+                  'ownerAddress',
+                  'tokenId'
+                ],
                 properties: {
+                  _id: { type: 'string' },
                   backgroundColor: { type: 'string' },
+                  description: { type: 'string' },
                   imageUrl: { type: 'string' },
+                  metadataUrl: { type: 'string' },
                   name: { type: 'string' },
                   nameSlug: { type: 'string' },
-                  description: { type: 'string' }
+                  ownerAddress: { type: 'string' },
+                  tokenId: { type: 'number' }
                 }
               }
             }
@@ -346,9 +355,10 @@ export default function nft(f: FastifyInstance) {
               type: 'array',
               items: {
                 additionalProperties: false,
-                required: ['backgroundColor', 'description', 'imageUrl', 'name', 'nameSlug'],
+                required: ['_id', 'backgroundColor', 'description', 'imageUrl', 'name', 'nameSlug'],
                 type: 'object',
                 properties: {
+                  _id: { type: 'string' },
                   backgroundColor: { type: 'string' },
                   description: { type: 'string' },
                   imageUrl: { type: 'string' },
@@ -363,5 +373,43 @@ export default function nft(f: FastifyInstance) {
       }
     },
     handler: getNFTsBySearch(f)
+  })
+
+  f.route({
+    method: 'DELETE',
+    url: '',
+    schema: {
+      body: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['_id'],
+        properties: {
+          _id: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['ok', 'data'],
+          properties: {
+            ok: { type: 'boolean' },
+            data: {
+              additionalProperties: false,
+              type: 'object',
+              required: ['message', 'token'],
+              properties: {
+                message: { type: 'string' },
+                token: { type: 'string' }
+              }
+            }
+          }
+        },
+        400: { $ref: 'ErrorResponse#' },
+        500: { $ref: 'ErrorResponse#' }
+      }
+    },
+    preHandler: [f.authenticate],
+    handler: burnNFT(f)
   })
 }
