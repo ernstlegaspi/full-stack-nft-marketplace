@@ -1,9 +1,10 @@
-import type { TDisplayedNFT, TNFTInput, TNFTResponse, TSearchedNFT, TUserNFT } from "@/types"
+import type { TDisplayedNFT, TNFTInput, TNFTResponse, TSearchedNFT, TTransfer, TUserNFT } from "@/types"
 
 const url = `${process.env.NEXT_PUBLIC_API_URL!}nft/`
 
 type TInput = {
   imageUrl: string
+  price: string
 } & TNFTInput
 
 type TUserTokens = {
@@ -24,6 +25,7 @@ export const mintNFT = async (data: TInput): Promise<TNFTResponse> => {
   )
 
   const body = await res.json() as TNFTResponse
+  console.log(body)
 
   return body
 }
@@ -128,6 +130,25 @@ export const burnNFT = async (_id: string) => {
   )
 
   const body = await res.json() as { ok: boolean, data: { message: string, token: string } }
+  console.log(body)
+
+  return body
+}
+
+export const transferNFT = async (data: TTransfer) => {
+  const res = await fetch(
+    `${url}transfer`,
+    {
+      credentials: 'include',
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    }
+  )
+
+  const body = await res.json() as { ok: boolean, message: string }
   console.log(body)
 
   return body

@@ -7,7 +7,7 @@ import dynamic from "next/dynamic"
 import Header from "@/components/header"
 import { useCookies } from "@/utils"
 
-const MintModal = dynamic(() => import('@/components/MintModal'))
+const Modal = dynamic(() => import('@/components/modal/Modal'))
 
 export const metadata: Metadata = {
   title: "NFT Marketplace",
@@ -19,7 +19,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 
   return <html lang="en">
     <body className='antialiased bg-w min-h-screen'>
-      { isAuthenticated ? <MintModal /> : null }
+      { isAuthenticated ? <Modal /> : null }
 
       <Header isAuthenticated={isAuthenticated} />
 

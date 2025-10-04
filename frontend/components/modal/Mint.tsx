@@ -1,6 +1,4 @@
-'use client'
-
-import { ChangeEvent, useEffect, useRef, useState } from 'react'
+import { ChangeEvent, Dispatch, SetStateAction, useEffect, useRef, useState } from 'react'
 import { IoAddSharp, IoCloseSharp } from 'react-icons/io5'
 import { FaCheck } from "react-icons/fa6"
 import { HexColorPicker } from "react-colorful"
@@ -8,7 +6,7 @@ import { z } from 'zod'
 
 import { TNFTInput } from '@/types'
 import { mintNFT } from '@/actions/nft'
-import { showMintModal } from '@/states/showMintModal'
+import { modalState } from '@/states/showModal'
 import { contractAddress } from '@/constants'
 import { uploadImageToPinata, uploadMetadataToPinata } from '@/actions/pinata'
 import { createContractOnPageRefresh } from '@/utils/nft'
@@ -23,10 +21,11 @@ type TState = {
   loading: boolean
   uploadedImage: File | null
   value: string
+  price: string
 } & Omit<TNFTInput, 'metadataUrl'>
 
-export default function MintModal() {
-  const { isShown, setIsShown } = showMintModal()
+export default function Mint() {
+  const { isShown, setIsShown } = modalState()
 
   const [_contract, setContract] = useState<ethers.Contract>()
   const [_address, setAddress] = useState('')
@@ -54,6 +53,7 @@ export default function MintModal() {
     description: '',
     name: '',
     nameSlug: '',
+    price: '',
 
     isAddingAttributes: false,
     isImagePng: false,
@@ -122,7 +122,7 @@ export default function MintModal() {
       })
 
       const { nft } = await mintNFT({
-        imageUrl: `https://ipfs.io/ipfs/${imageUrl}`,
+        imageUrl,
         attributes: state.attributes,
         backgroundColor: state.backgroundColor,
         collection: state.collection,
@@ -130,10 +130,13 @@ export default function MintModal() {
         description: state.description,
         name: state.name,
         nameSlug: state.name.toLowerCase().replaceAll(' ', '-'),
-        metadataUrl
+        metadataUrl,
+        price: state.price
       })
 
-      await _contract.mintNFT(nft.tokenId, `ipfs://${metadataUrl}`)
+      console.log(nft.tokenId)
+      
+      await _contract.mintNFT(nft.tokenId, `ipfs://${metadataUrl}`, parseInt(state.price))
 
       alert('Token Minted')
       window.location.reload()
@@ -190,8 +193,15 @@ export default function MintModal() {
     imageRef.current.click()
   }
 
+  const handlePrice = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value
+
+    val = val.replace(/[^0-9.]/g, '')
+    handleState('price', val)
+  }
+
   return <div className='z-30 flex items-center justify-center fixed bg-black/50 inset-0'>
-    <div className='w-[400px] border-2 border-bb rounded bg-white p-4'>
+    <div className='w-[400px] border-2 border-bb rounded bg-white p-4 max-[410px]:w-[95%]'>
       <p className='font-medium text-[24px] mb-6'>Mint a new NFT</p>
 
       <div className='h-[200px] w-full relative'>
@@ -250,15 +260,31 @@ export default function MintModal() {
         </div> : null
       }
 
-      <div className='my-3'>
-        <Label label='Name' />
-        <input
-          disabled={state.loading}
-          className={`${state.loading ? 'input-disabled' : ''} input`}
-          name='name'
-          value={state.name}
-          onChange={e => handleState('name', e.target.value)}
-        />
+      <div className='my-3 flex items-center'>
+        <div>
+          <Label label='Name' />
+          <input
+            disabled={state.loading}
+            className={`${state.loading ? 'input-disabled' : ''} input`}
+            name='name'
+            value={state.name}
+            onChange={e => handleState('name', e.target.value)}
+          />
+        </div>
+
+        <div className='ml-2'>
+          <Label label='Price (ETH)' />
+          <input
+            type='text'
+            onChange={handlePrice}
+            disabled={state.loading}
+            inputMode='decimal'
+            pattern='[0-9.]*'
+            className={`${state.loading ? 'input-disabled' : ''} input`}
+            name='price'
+            value={state.price}
+          />
+        </div>
       </div>
 
       <Label label='Collection' />

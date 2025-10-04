@@ -22,7 +22,6 @@ export default function NFTCard({ contract, nft, userAddress }: { contract: ethe
   const [loading, setLoading] = useState(false)
 
   const isOwner = userAddress == ownerAddress
-  const _imageUrl = imageUrl.split('ipfs/')[1]
   const modifiedDescription = description.slice(0, 45)
 
   const onClick = async () => {
@@ -31,7 +30,7 @@ export default function NFTCard({ contract, nft, userAddress }: { contract: ethe
 
       await contract.burnNFT(tokenId)
       await burnNFT(_id)
-      await deleteFileOnPinata(_imageUrl, metadataUrl)
+      await deleteFileOnPinata(imageUrl, metadataUrl)
 
     } catch(e) {
       console.error(e)
@@ -49,7 +48,7 @@ export default function NFTCard({ contract, nft, userAddress }: { contract: ethe
 
           <img
             alt={name}
-            src={imageUrl}
+            src={`https://ipfs.io/ipfs/${imageUrl}`}
             className='relative z-[2] size-full rounded'
           />
         </div>

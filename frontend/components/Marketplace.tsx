@@ -8,7 +8,6 @@ import Loader from "./Loader"
 import { TDisplayedNFT } from "@/types"
 import { getAllTokens } from "@/actions/nft"
 import { userUserAddress } from "@/states/userAddress"
-import { getUserAddress } from "@/actions/user"
 import { ethers } from "ethers"
 import { createContractOnPageRefresh } from "@/utils/nft"
 
@@ -35,7 +34,6 @@ export default function Marketplace() {
         const { address, contract } = await createContractOnPageRefresh()
         setUserAddress(address)
         setContract(contract)
-        console.log(contract)
       } catch(e) {
         console.error(e)
       } finally {

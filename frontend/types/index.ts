@@ -58,3 +58,8 @@ export type TDisplayedNFT = {
   ownerAddress: string
   tokenId: number
 }
+
+export type TTransfer = {
+  newOwnerAddress: string
+  tokenId: number
+}

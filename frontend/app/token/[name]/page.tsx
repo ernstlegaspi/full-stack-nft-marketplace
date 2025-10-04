@@ -29,8 +29,8 @@ export default async function TokenPage({ params }: { params: Promise<{ name: st
           <div className='absolute z-[1] size-full' style={{ background: res.backgroundColor }}></div>
 
           <img
-            alt={res.name}
-            src={res.imageUrl}
+            alt={res.imageUrl}
+            src={`https://ipfs.io/ipfs/${res.imageUrl}`}
             className='size-full z-[2] relative rounded max-[680px]:mx-auto'
           />
         </div>
