@@ -16,11 +16,11 @@ const userSchema = new mongoose_1.Schema({
         type: String,
         trim: true
     },
-    soldNFTs: {
-        type: Number,
-        default: 0
-    },
     burnedNFTs: [{
+            type: mongoose_1.Schema.Types.ObjectId,
+            ref: 'NFT'
+        }],
+    soldNFTs: [{
             type: mongoose_1.Schema.Types.ObjectId,
             ref: 'NFT'
         }],
@@ -28,5 +28,9 @@ const userSchema = new mongoose_1.Schema({
             type: mongoose_1.Schema.Types.ObjectId,
             ref: 'NFT'
         }],
+    ownedNFTs: [{
+            type: mongoose_1.Schema.Types.ObjectId,
+            ref: 'NFT'
+        }]
 }, { timestamps: true });
 exports.default = (0, mongoose_1.model)('User', userSchema);

@@ -3,7 +3,7 @@ import { SiweMessage } from 'siwe'
 
 import { contractABI, contractAddress } from '../constants'
 
-function isEip1193(p: unknown): p is Eip1193Provider {
+export const isEip1193 = (p: unknown): p is Eip1193Provider => {
   return !!p && typeof (p as any).request === "function"
 }
 
@@ -112,7 +112,7 @@ export const checkEthConnection = async () => {
 }
 
 export const createContractOnPageRefresh = async (): Promise<{ address: string, contract: ethers.Contract }> => {
-  if(typeof window === "undefined" || !isEip1193(window.ethereum)) {
+  if(typeof window === 'undefined' || !isEip1193(window.ethereum)) {
     throw new Error("No EIP-1193 provider found.")
   }
 

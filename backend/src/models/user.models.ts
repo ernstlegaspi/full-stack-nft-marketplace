@@ -15,11 +15,11 @@ const userSchema = new Schema({
     type: String,
     trim: true
   },
-  soldNFTs: {
-    type: Number,
-    default: 0
-  },
   burnedNFTs: [{
+    type: Schema.Types.ObjectId,
+    ref: 'NFT'
+  }],
+  soldNFTs: [{
     type: Schema.Types.ObjectId,
     ref: 'NFT'
   }],
@@ -27,6 +27,10 @@ const userSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'NFT'
   }],
+  ownedNFTs: [{
+    type: Schema.Types.ObjectId,
+    ref: 'NFT'
+  }]
 }, { timestamps: true })
 
 export default model('User', userSchema)

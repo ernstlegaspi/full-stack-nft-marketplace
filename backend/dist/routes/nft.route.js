@@ -26,6 +26,42 @@ const nftAttributesField = {
         }
     }
 };
+const requiredDisplayedTokens = [
+    '_id',
+    'backgroundColor',
+    'description',
+    'imageUrl',
+    'metadataUrl',
+    'name',
+    'nameSlug',
+    'ownerAddress',
+    'price',
+    'tokenId'
+];
+const propDisplayedTokens = {
+    _id: { type: 'string' },
+    backgroundColor: { type: 'string' },
+    description: { type: 'string' },
+    imageUrl: { type: 'string' },
+    metadataUrl: { type: 'string' },
+    name: { type: 'string' },
+    nameSlug: { type: 'string' },
+    ownerAddress: { type: 'string' },
+    price: { type: 'string' },
+    tokenId: { type: 'number' }
+};
+const objectIdSchema = {
+    type: 'string',
+    pattern: '^[a-fA-F0-9]{24}$',
+    minLength: 24,
+    maxLength: 24
+};
+const solidityAddressSchema = {
+    type: 'string',
+    pattern: '^0x[a-fA-F0-9]{40}$',
+    minLength: 42,
+    maxLength: 42
+};
 function nft(f) {
     f.route({
         method: 'POST',
@@ -34,16 +70,14 @@ function nft(f) {
             body: {
                 type: 'object',
                 additionalProperties: false,
-                required: nftRequiredFields,
+                required: [
+                    'price',
+                    ...nftRequiredFields
+                ],
                 properties: {
                     attributes: nftAttributesField,
                     collection: { type: 'string', minLength: 3 },
-                    contractAddress: {
-                        type: 'string',
-                        pattern: '^0x[a-fA-F0-9]{40}$',
-                        minLength: 42,
-                        maxLength: 42
-                    },
+                    contractAddress: solidityAddressSchema,
                     backgroundColor: {
                         type: 'string',
                         pattern: '^#[a-fA-F0-9]{6}$',
@@ -51,10 +85,11 @@ function nft(f) {
                         maxLength: 7
                     },
                     description: { type: 'string', minLength: 8 },
-                    imageUrl: { type: 'string', format: 'uri' },
+                    imageUrl: { type: 'string' },
                     metadataUrl: { type: 'string' },
                     name: { type: 'string', minLength: 2 },
-                    nameSlug: { type: 'string', minLength: 2 }
+                    nameSlug: { type: 'string', minLength: 2 },
+                    price: { type: 'string' }
                 }
             },
             response: {
@@ -71,8 +106,9 @@ function nft(f) {
                                 '_id',
                                 'creator',
                                 'ownerId',
-                                'tokenId',
                                 'ownerAddress',
+                                'tokenId',
+                                'price',
                                 ...nftRequiredFields
                             ],
                             properties: {
@@ -89,6 +125,7 @@ function nft(f) {
                                 nameSlug: { type: 'string' },
                                 ownerAddress: { type: 'string' },
                                 ownerId: { type: 'string' },
+                                price: { type: 'integer' },
                                 tokenId: { type: 'integer' }
                             }
                         }
@@ -125,22 +162,8 @@ function nft(f) {
                             items: {
                                 type: 'object',
                                 additionalProperties: false,
-                                required: [
-                                    '_id',
-                                    'backgroundColor',
-                                    'description',
-                                    'imageUrl',
-                                    'name',
-                                    'nameSlug'
-                                ],
-                                properties: {
-                                    _id: { type: 'string' },
-                                    backgroundColor: { type: 'string' },
-                                    description: { type: 'string' },
-                                    imageUrl: { type: 'string' },
-                                    name: { type: 'string' },
-                                    nameSlug: { type: 'string' }
-                                }
+                                required: requiredDisplayedTokens,
+                                properties: propDisplayedTokens
                             }
                         }
                     }
@@ -293,27 +316,8 @@ function nft(f) {
                             items: {
                                 type: 'object',
                                 additionalProperties: false,
-                                required: ['_id',
-                                    'backgroundColor',
-                                    'description',
-                                    'imageUrl',
-                                    'metadataUrl',
-                                    'name',
-                                    'nameSlug',
-                                    'ownerAddress',
-                                    'tokenId'
-                                ],
-                                properties: {
-                                    _id: { type: 'string' },
-                                    backgroundColor: { type: 'string' },
-                                    description: { type: 'string' },
-                                    imageUrl: { type: 'string' },
-                                    metadataUrl: { type: 'string' },
-                                    name: { type: 'string' },
-                                    nameSlug: { type: 'string' },
-                                    ownerAddress: { type: 'string' },
-                                    tokenId: { type: 'number' }
-                                }
+                                required: requiredDisplayedTokens,
+                                properties: propDisplayedTokens
                             }
                         }
                     }
@@ -349,16 +353,9 @@ function nft(f) {
                             type: 'array',
                             items: {
                                 additionalProperties: false,
-                                required: ['_id', 'backgroundColor', 'description', 'imageUrl', 'name', 'nameSlug'],
+                                required: requiredDisplayedTokens,
                                 type: 'object',
-                                properties: {
-                                    _id: { type: 'string' },
-                                    backgroundColor: { type: 'string' },
-                                    description: { type: 'string' },
-                                    imageUrl: { type: 'string' },
-                                    name: { type: 'string' },
-                                    nameSlug: { type: 'string' }
-                                }
+                                properties: propDisplayedTokens
                             }
                         }
                     }
@@ -404,5 +401,63 @@ function nft(f) {
         },
         preHandler: [f.authenticate],
         handler: (0, nft_controller_1.burnNFT)(f)
+    });
+    f.route({
+        method: 'PATCH',
+        url: 'transfer',
+        schema: {
+            body: {
+                additionalProperties: false,
+                type: 'object',
+                required: ['tokenId', 'newOwnerAddress'],
+                properties: {
+                    tokenId: { type: 'number' },
+                    newOwnerAddress: solidityAddressSchema
+                }
+            },
+            response: {
+                200: {
+                    additionalProperties: false,
+                    type: 'object',
+                    required: ['ok', 'message'],
+                    properties: {
+                        ok: { type: 'boolean' },
+                        message: { type: 'string' }
+                    }
+                },
+                400: { $ref: 'ErrorResponse#' },
+                500: { $ref: 'ErrorResponse#' }
+            }
+        },
+        preHandler: [f.authenticate],
+        handler: (0, nft_controller_1.transferNFT)(f)
+    });
+    f.route({
+        method: 'PATCH',
+        url: 'buy',
+        schema: {
+            body: {
+                additionalProperties: false,
+                required: ['tokenId'],
+                type: 'object',
+                properties: {
+                    tokenId: { type: 'number' }
+                }
+            },
+            response: {
+                200: {
+                    type: 'object',
+                    additionalProperties: false,
+                    required: ['ok'],
+                    properties: {
+                        ok: { type: 'boolean' }
+                    }
+                },
+                400: { $ref: 'ErrorResponse#' },
+                500: { $ref: 'ErrorResponse#' }
+            }
+        },
+        preHandler: [f.authenticate],
+        handler: (0, nft_controller_1.buyNFT)(f)
     });
 }

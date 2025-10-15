@@ -56,6 +56,7 @@ export type TDisplayedNFT = {
   name: string
   nameSlug: string
   ownerAddress: string
+  price: string
   tokenId: number
 }
 

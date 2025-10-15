@@ -1,8 +1,9 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
+import mongoose, { type ClientSession } from 'mongoose'
 
 import NFT from '../models/nft.model'
 import User from '../models/user.models'
-import { _400, _404, _500 } from '../utils/http_code'
+import { _400, _401, _404, _500 } from '../utils/http_code'
 import { decode } from '../utils'
 
 type TMintNFT = {
@@ -20,6 +21,7 @@ type TMintNFT = {
   metadataUrl: string
   name: string
   nameSlug: string
+  price: string
 }
 
 const allTokensKeys = 'all:tokens'
@@ -50,35 +52,64 @@ export const mintNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body
       imageUrl,
       metadataUrl,
       name,
-      nameSlug
+      nameSlug,
+      price
     } = req.body
 
     const { address, sub: userId } = decode(f, req) as { address: string, sub: string }
     const tokenId = await f.redis.incr(contractAddress)
 
-    const nft = await NFT.create({
-      attributes,
-      backgroundColor,
-      collection,
-      contractAddress,
-      creator: userId,
-      description,
-      imageUrl,
-      metadataUrl,
-      name,
-      nameSlug,
-      ownerAddress: address,
-      ownerId: userId,
-      tokenId
-    })
+    const nft = await NFT.create(
+      {
+        attributes,
+        backgroundColor,
+        collection,
+        contractAddress,
+        creator: userId,
+        description,
+        imageUrl,
+        metadataUrl,
+        name,
+        nameSlug,
+        price,
+        ownerAddress: address,
+        ownerId: userId,
+        tokenId
+      }
+    )
 
     await User.findByIdAndUpdate(
       userId,
-      {
-        $addToSet: {
-          mintedNFTs: nft._id
+      [
+        {
+          $set: {
+            accountBalance: {
+              $toString: {
+                $subtract: [
+                  {
+                    $convert: {
+                      input: '$accountBalance',
+                      to: 'decimal',
+                      onError: 0,
+                      onNull: 0
+                    }
+                  },
+                  {
+                    $convert: {
+                      input: price,
+                      to: 'decimal',
+                      onError: 0,
+                      onNull: 0
+                    }
+                  }
+                ]
+              }
+            },
+            mintedNFTs: { $setUnion: ['$mintedNFTs', [nft._id]] },
+            ownedNFTs: { $setUnion: ['$ownedNFTs', [nft._id]] }
+          }
         }
-      }
+      ]
     )
 
     const { createdAt, updatedAt, ...rest } = nft.toObject()
@@ -122,7 +153,7 @@ export const getAllUserNFT = (f: FastifyInstance) => async (req: FastifyRequest<
 
     const [docs, total] = await Promise.all([
       NFT.find(q)
-      .select('_id backgroundColor description imageUrl name nameSlug')
+      .select('_id backgroundColor description imageUrl metadataUrl name nameSlug ownerAddress tokenId')
       .limit(limit)
       .skip((page - 1) * limit)
       .sort({ createdAt: -1 })
@@ -174,7 +205,7 @@ export const getTokenPerName = (f: FastifyInstance) => async (req: FastifyReques
     .select('-ownerAddress -__v -updatedAt')
     .populate({
       path: 'creator',
-      select: '-_id address'
+      select: '-_id address',
     })
     .populate({
       path: 'ownerId',
@@ -288,7 +319,7 @@ export const getNFTsBySearch = (f: FastifyInstance) => async (req: FastifyReques
 
     const [docs, total] = await Promise.all([
       NFT.find(q)
-      .select('_id backgroundColor description imageUrl name nameSlug')
+      .select('_id backgroundColor description imageUrl metadataUrl name nameSlug ownerAddress tokenId')
       .limit(limit)
       .skip((page - 1) * limit)
       .sort({ createdAt: -1 })
@@ -334,17 +365,17 @@ export const getAllTokens = (f: FastifyInstance) => async (req: FastifyRequest<{
 
     const result = await f.redis.get(key)
 
-    // if(result) {
-    //   const parsedResult = JSON.parse(result)
+    if(result) {
+      const parsedResult = JSON.parse(result)
 
-    //   return rep.code(200).send({ cached: true, hasMore: parsedResult.hasMore, nfts: parsedResult.nfts })
-    // }
+      return rep.code(200).send({ cached: true, hasMore: parsedResult.hasMore, nfts: parsedResult.nfts })
+    }
 
     const skip = (page - 1) * limit
 
     const [doc, total] = await Promise.all([
       NFT.find()
-      .select('_id backgroundColor description imageUrl metadataUrl name nameSlug ownerAddress tokenId')
+      .select('_id backgroundColor description imageUrl metadataUrl name nameSlug ownerAddress price tokenId')
       .limit(limit)
       .skip(skip)
       .sort({ createdAt: -1 })
@@ -402,6 +433,208 @@ export const burnNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body
       token: deletedNFT
     } })
   } catch(e) {
+    console.error(e)
+    _500(rep)
+  }
+}
+
+export const transferNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body: { newOwnerAddress: string, tokenId: number } }>, rep: FastifyReply) => {
+  try {
+    // _id = token _id
+    const { tokenId, newOwnerAddress } = req.body
+
+    const token = await NFT.findOne({ tokenId }).select('_id ownerAddress').lean()
+
+    if(!token) return _400(rep, 'No existing token with that ID')
+
+    const _id = token._id
+
+    const { address: currentOwnerAddress, sub: currentOwnerId } = decode(f, req) as { address: string, sub: string }
+
+    if(token.ownerAddress !== currentOwnerAddress) return _401(rep, 'You do not own this token.')
+
+    const oldUser = await User.findOneAndUpdate(
+      { _id: currentOwnerId },
+      { $pull: { ownedNFTs: _id } }
+    )
+
+    if(!oldUser) return _400(rep, 'Unable to find old user. Try again later.')
+
+    const newOwner = await User.findOneAndUpdate(
+      { address: newOwnerAddress },
+      { $addToSet: { ownedNFTs: _id } }
+    )
+    .select('_id')
+    .lean()
+
+    if(!newOwner) return _400(rep, 'Unable to find new user. Try again later.')
+
+    const updateToken = await NFT.findOneAndUpdate(
+      { _id },
+      {
+        $set: {
+          ownerAddress: newOwnerAddress,
+          ownerId: newOwner._id
+        }
+      },
+      { new: true }
+    )
+
+    if(!updateToken) return _400(rep, 'Unable to find token. Try again later.')
+
+    return rep.code(200).send({ ok: true, message: 'Transfer complete!' })
+  } catch(e) {
+    console.error(e)
+    _500(rep)
+  }
+}
+
+export const buyNFT = (f: FastifyInstance) => async (req: FastifyRequest<{ Body: { tokenId: number } }>, rep: FastifyReply) => {
+  let session: ClientSession | null = null
+
+  try {
+    // addtoset to sold nfts to seller
+    // pull token to ownedNfts to seller
+    // set ownerAddress to newOwnerAddress as well as ownerId
+    // subtract price to buyer's account balance
+
+    const { tokenId: _id } = req.body
+
+    session = await mongoose.startSession()
+    session.startTransaction()
+
+    const token = await NFT.findOne({ tokenId: _id })
+    .select('_id ownerAddress price')
+    .lean()
+
+    if(!token) {
+      await session.abortTransaction()
+
+      return _400(rep, 'No existing token with that ID')
+    }
+
+    const tokenObjectId = token._id
+    const sellerAddress = token.ownerAddress
+
+    const seller = await User.findOneAndUpdate(
+      { address: sellerAddress },
+      [
+        {
+          $set: {
+            accountBalance: {
+              $toString: {
+                $add: [
+                  {
+                    $convert: {
+                      input: '$accountBalance',
+                      to: 'decimal',
+                      onError: 0,
+                      onNull: 0
+                    }
+                  },
+                  {
+                    $convert: {
+                      input: token.price,
+                      to: 'decimal',
+                      onError: 0,
+                      onNull: 0
+                    }
+                  }
+                ]
+              }
+            },
+            soldNFTs: { $setUnion: ['$soldNFTs', [tokenObjectId]] },
+            ownedNFTs: {
+              $filter: {
+                input: '$ownedNFTs',
+                as: 'id',
+                cond: { $ne: ['$$id', tokenObjectId] }
+              }
+            }
+          }
+        }
+      ],
+      { new: true, session }
+    )
+
+    if(!seller) {
+      await session.abortTransaction()
+
+      return _400(rep, 'Unable to buy token. Try again later.')
+    }
+
+    const { address: buyerAddress, sub: buyerId } = decode(f, req) as { address: string, sub: string }
+
+    const buyer = await User.findOneAndUpdate(
+      { _id: buyerId },
+      [
+        {
+          $set: {
+            ownedNFTs: {
+              $setUnion: ['$ownedNFTs', [tokenObjectId]]
+            },
+            accountBalance: {
+              $toString: {
+                $subtract: [
+                  {
+                    $convert: {
+                      input: '$accountBalance',
+                      to: 'decimal',
+                      onError: 0,
+                      onNull: 0
+                    }
+                  },
+                  {
+                    $convert: {
+                      input: token.price,
+                      to: 'decimal',
+                      onError: 0,
+                      onNull: 0
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      { new: true, session }
+    )
+
+    if(!buyer) {
+      await session.abortTransaction()
+
+      return _400(rep, 'Unable to buy token. Try again later.')
+    }
+
+    const _token = await NFT.findOneAndUpdate(
+      { _id: tokenObjectId },
+      {
+        $set: {
+          ownerAddress: buyerAddress,
+          ownerId: buyerId
+        }
+      },
+      { new: true, session }
+    )
+    .select('description imageUrl name nameSlug tokenId')
+    .lean()
+
+    if(!_token) {
+      await session.abortTransaction()
+
+      return _400(rep, 'Unable to buy token. Try again later.')
+    }
+
+    await session.commitTransaction()
+    session.endSession()
+
+    await deleteFetchCache(f)
+
+    return rep.code(200).send({ ok: true })
+  } catch(e) {
+    if(session) await session.abortTransaction()
+
     console.error(e)
     _500(rep)
   }

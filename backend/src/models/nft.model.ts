@@ -63,6 +63,19 @@ const NFTSchema = new Schema({
   ownerId: {
     type: Schema.Types.ObjectId,
     ref: 'User'
+  },
+  status: {
+    type: String,
+    enum: {
+      values: ['active', 'burned'],
+      message: '{VALUE} is not a valid status'
+    },
+    default: 'active'
+  },
+  price: {
+    type: String,
+    default: 0,
+    required: true
   }
 }, { timestamps: true })
 

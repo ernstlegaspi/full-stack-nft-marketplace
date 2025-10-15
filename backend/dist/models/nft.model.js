@@ -63,6 +63,19 @@ const NFTSchema = new mongoose_1.Schema({
     ownerId: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'User'
+    },
+    status: {
+        type: String,
+        enum: {
+            values: ['active', 'burned'],
+            message: '{VALUE} is not a valid status'
+        },
+        default: 'active'
+    },
+    price: {
+        type: String,
+        default: 0,
+        required: true
     }
 }, { timestamps: true });
 NFTSchema.index({ contractAddress: 1, tokenId: 1 }, { unique: true }); // same contract address and token id is not allowed on the database

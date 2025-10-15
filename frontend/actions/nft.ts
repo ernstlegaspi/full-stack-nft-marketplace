@@ -153,3 +153,22 @@ export const transferNFT = async (data: TTransfer) => {
 
   return body
 }
+
+export const buyNFT = async (tokenId: number) => {
+  const res = await fetch(
+    `${url}buy`,
+    {
+      credentials: 'include',
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ tokenId })
+    }
+  )
+
+  const body = await res.json() as { ok: boolean, message: string }
+  console.log(body)
+
+  return body
+}

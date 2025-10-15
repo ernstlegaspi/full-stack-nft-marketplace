@@ -121,6 +121,23 @@ export default function Mint() {
         name: state.name
       })
 
+      const weiPrice = ethers.parseEther(state.price)
+      const mintFee = ethers.parseEther('0.001')
+
+      const eth = window?.ethereum
+
+      const accounts = await eth?.request({ method: 'eth_accounts' })
+      const acc = accounts[0]
+      const userBalanceWei = await eth?.request({
+        method: 'eth_getBalance',
+        params: [acc, 'latest']
+      })
+
+      if(mintFee > userBalanceWei) {
+        alert('You do not have enough balance for mint fee.')
+        return
+      }
+
       const { nft } = await mintNFT({
         imageUrl,
         attributes: state.attributes,
@@ -131,12 +148,10 @@ export default function Mint() {
         name: state.name,
         nameSlug: state.name.toLowerCase().replaceAll(' ', '-'),
         metadataUrl,
-        price: state.price
+        price: weiPrice.toString()
       })
 
-      console.log(nft.tokenId)
-      
-      await _contract.mintNFT(nft.tokenId, `ipfs://${metadataUrl}`, parseInt(state.price))
+      await _contract.mintNFT(nft.tokenId, `ipfs://${metadataUrl}`, BigInt(weiPrice), { value: mintFee })
 
       alert('Token Minted')
       window.location.reload()
